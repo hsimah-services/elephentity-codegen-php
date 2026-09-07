@@ -100,6 +100,55 @@ final class GoldenTest extends TestCase
         self::assertSame([], $response['files']);
     }
 
+    public function testItDescribesItselfAsProvidingNothing(): void
+    {
+        // Answering emptily is still answering, and is what separates "provides
+        // nothing" from "could not be asked" — which is the difference between a
+        // language generator working normally and a build that should refuse.
+        $result = $this->invoke((string) json_encode([
+            'elephentity' => 1,
+            'irVersion' => '1.0',
+            'request' => 'describe',
+            'target' => 'php',
+        ]));
+
+        self::assertSame(0, $result['exit'], $result['stderr']);
+        self::assertSame('', $result['stderr']);
+        self::assertSame(
+            ['elephentity' => 1, 'irVersion' => '1.0', 'provides' => []],
+            json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testDescribeIsRefusedFromAnotherIrVersionToo(): void
+    {
+        // The gate is on the exchange, not on the payload. A describe carries no schema
+        // and still must not be answered across a version boundary, because what it
+        // answers shapes the spec the other side is about to compile.
+        $result = $this->invoke((string) json_encode([
+            'elephentity' => 1,
+            'irVersion' => '99.0',
+            'request' => 'describe',
+            'target' => 'php',
+        ]));
+
+        self::assertSame(1, $result['exit']);
+        self::assertSame('', $result['stdout']);
+        self::assertStringContainsString('IR version mismatch', $result['stderr']);
+    }
+
+    public function testAnUnknownRequestNamesWhatItCanAnswer(): void
+    {
+        $result = $this->invoke((string) json_encode([
+            'elephentity' => 1,
+            'irVersion' => '1.0',
+            'request' => 'compile',
+        ]));
+
+        self::assertSame(1, $result['exit']);
+        self::assertStringContainsString('Unknown request "compile"', $result['stderr']);
+    }
+
     public function testNothingOnStdinIsSaidPlainly(): void
     {
         $result = $this->invoke('');
