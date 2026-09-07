@@ -56,6 +56,64 @@ final readonly class Envelope
     public const IR_VERSION = '1.0';
 
     /**
+     * The two things this builder can be asked for.
+     *
+     * A discriminator rather than a second wire format: the exchange is identical
+     * either way, one JSON object in and one out, with the versions outside the
+     * payload. Absent means `generate`, which is what it meant before describe existed.
+     */
+    public const REQUEST_GENERATE = 'generate';
+
+    public const REQUEST_DESCRIBE = 'describe';
+
+    /**
+     * Which of the two this request is.
+     *
+     * Read before anything else about the request, because a describe carries no schema
+     * and no output directory — decoding it as a generate is exactly how a builder that
+     * predates describe fails.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function requestKind(array $data): string
+    {
+        $kind = $data['request'] ?? self::REQUEST_GENERATE;
+
+        if (self::REQUEST_GENERATE !== $kind && self::REQUEST_DESCRIBE !== $kind) {
+            throw new ProtocolException(sprintf(
+                'Unknown request "%s". This build answers "%s" and "%s".',
+                is_scalar($kind) ? (string) $kind : get_debug_type($kind),
+                self::REQUEST_GENERATE,
+                self::REQUEST_DESCRIBE,
+            ));
+        }
+
+        return $kind;
+    }
+
+    /**
+     * What this builder provides: nothing.
+     *
+     * It generates PHP from the IR and knows no platform — no integration to declare,
+     * no storage driver to claim. Answering emptily is still answering, and is what
+     * separates "provides nothing" from "could not be asked".
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
+    public static function describe(array $data): array
+    {
+        self::assertVersions($data);
+
+        return [
+            'elephentity' => self::VERSION,
+            'irVersion' => self::IR_VERSION,
+            'provides' => (object) [],
+        ];
+    }
+
+    /**
      * Read a request, refusing anything this build cannot be sure it understands.
      *
      * @param array<string, mixed> $data
