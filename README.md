@@ -1,11 +1,11 @@
 # elephentity-codegen-php
 
-The PHP builder for [Elephentity](https://github.com/hsimah/elephentity).
+The PHP builder for [Elephentity](https://github.com/hsimah-services/elephentity).
 
 It reads one JSON request on stdin — the compiled spec, plus the target's configuration
 — and writes one JSON response on stdout: a path and a body per file. It never touches
 the filesystem. Signing and writing happen in
-[elephentity-codegen](https://github.com/hsimah/elephentity-codegen), after this exits.
+[elephentity-codegen](https://github.com/hsimah-services/elephentity-codegen), after this exits.
 
 ```bash
 echo '{"elephentity":1,"irVersion":"1.0","target":"php","config":{},
