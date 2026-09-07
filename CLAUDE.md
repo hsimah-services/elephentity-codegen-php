@@ -61,6 +61,18 @@ new binary has to reproduce them exactly. `tests/PhpTargetTest.php` is the reada
 version of the same thing — it asserts what each construct produces, so a failure names
 the feature rather than a byte offset.
 
+## Before you commit anything that crosses a repository boundary
+
+Elephentity is three published programs that talk over a wire format, not a shared
+classpath — so nothing type-checks across the gap, and a builder that falls behind the
+compiler fails at run time rather than at build time.
+
+**[`.llms/cross-repo.md`](.llms/cross-repo.md) is the closed list of what crosses.** If
+you changed something on it, open an issue on each repository it reaches, before or with
+the push. [`.llms/README.md`](.llms/README.md) has the rule and
+[`.llms/issue-template.md`](.llms/issue-template.md) the shape. Everything depends on
+`dev-main`, so a contract change that lands alone breaks somebody's build that afternoon.
+
 ## Before you commit
 
 - `./tools/php composer ci`
