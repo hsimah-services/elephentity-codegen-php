@@ -8,6 +8,7 @@ use Eleph\Gen\Php\GeneratedFile;
 use Eleph\Gen\Php\Ir\Cardinality;
 use Eleph\Gen\Php\Ir\EdgeDefinition;
 use Eleph\Gen\Php\Ir\EntityDefinition;
+use Eleph\Gen\Php\Ir\Schema;
 use Eleph\Gen\Php\Naming\Emitter;
 use Eleph\Gen\Php\Naming\Names;
 use Eleph\Gen\Php\Naming\TypeMapper;
@@ -37,6 +38,7 @@ use Nette\PhpGenerator\PhpNamespace;
 final readonly class MutatorGenerator
 {
     public function __construct(
+        private Schema $schema,
         private Names $names,
         private TypeMapper $types,
         private Emitter $emitter,
@@ -52,6 +54,15 @@ final readonly class MutatorGenerator
         $type = $namespace->addClass($this->emitter->shortName($class));
         $type->setFinal();
         $type->addComment(sprintf('Pending changes to a %s.', $entity->name));
+
+        foreach ($entity->appliedPatterns as $patternName) {
+            if (null === $this->schema->pattern($patternName)) {
+                continue;
+            }
+
+            $namespace->addUse($this->names->patternMutatorTrait($patternName));
+            $type->addTrait($this->names->patternMutatorTrait($patternName));
+        }
 
         $constructor = $type->addMethod('__construct');
         $constructor->addPromotedParameter('buffer')

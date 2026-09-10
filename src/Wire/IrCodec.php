@@ -10,6 +10,7 @@ use Eleph\Gen\Php\Ir\ArgumentDefinition;
 use Eleph\Gen\Php\Ir\EdgeDefinition;
 use Eleph\Gen\Php\Ir\EntityDefinition;
 use Eleph\Gen\Php\Ir\FieldDefinition;
+use Eleph\Gen\Php\Ir\PatternDeclaration;
 use Eleph\Gen\Php\Ir\ProjectDefinition;
 use Eleph\Gen\Php\Ir\QueryDefinition;
 use Eleph\Gen\Php\Ir\Schema;
@@ -26,7 +27,7 @@ use UnitEnum;
  * The IR as JSON, so a generator written in any language can read it.
  *
  * Reflection over the constructors rather than a hand-written encoder per class: the IR
- * is 18 plain value objects with promoted properties and no behaviour in their shape, so
+ * is 19 plain value objects with promoted properties and no behaviour in their shape, so
  * a generic walk is both shorter and impossible to leave half-updated when a field is
  * added. The price is the one thing reflection cannot see — what a collection holds —
  * which is why COLLECTIONS exists.
@@ -65,6 +66,7 @@ final readonly class IrCodec
         Schema::class => [
             'entities' => EntityDefinition::class,
             'types' => TypeDefinition::class,
+            'patterns' => PatternDeclaration::class,
         ],
         EntityDefinition::class => [
             'fields' => FieldDefinition::class,
@@ -72,6 +74,10 @@ final readonly class IrCodec
             'queries' => QueryDefinition::class,
             'actions' => ActionDefinition::class,
             'triggers' => TriggerDefinition::class,
+        ],
+        PatternDeclaration::class => [
+            'fields' => FieldDefinition::class,
+            'edges' => EdgeDefinition::class,
         ],
         QueryDefinition::class => ['arguments' => ArgumentDefinition::class],
         ActionDefinition::class => ['arguments' => ArgumentDefinition::class],
@@ -92,8 +98,9 @@ final readonly class IrCodec
      * @var array<class-string, list<string>>
      */
     private const MAPS = [
-        Schema::class => ['entities', 'types'],
+        Schema::class => ['entities', 'types', 'patterns'],
         EntityDefinition::class => ['fields', 'edges', 'queries', 'actions', 'triggers', 'config'],
+        PatternDeclaration::class => ['fields', 'edges'],
         ActionDefinition::class => ['arguments'],
         QueryDefinition::class => ['arguments'],
     ];

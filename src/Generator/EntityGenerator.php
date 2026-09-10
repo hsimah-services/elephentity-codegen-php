@@ -47,6 +47,18 @@ final readonly class EntityGenerator
         $type->setFinal();
         $type->addComment($entity->description ?? sprintf('%s, as stored.', $entity->name));
 
+        foreach ($entity->appliedPatterns as $patternName) {
+            $pattern = $this->schema->pattern($patternName);
+
+            if (null === $pattern) {
+                continue;
+            }
+
+            $contract = $this->names->patternContract($patternName);
+            $namespace->addUse($contract);
+            $type->addImplement($contract);
+        }
+
         $constructor = $type->addMethod('__construct');
 
         $constructor->addPromotedParameter('id')
