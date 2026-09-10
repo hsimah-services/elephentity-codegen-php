@@ -16,6 +16,7 @@ use Eleph\Gen\Php\Generator\FinderGenerator;
 use Eleph\Gen\Php\Generator\HydratorGenerator;
 use Eleph\Gen\Php\Generator\InputGenerator;
 use Eleph\Gen\Php\Generator\MutatorGenerator;
+use Eleph\Gen\Php\Generator\PatternGenerator;
 use Eleph\Gen\Php\Ir\Schema;
 use Eleph\Gen\Php\Naming\Emitter;
 use Eleph\Gen\Php\Naming\Names;
@@ -55,7 +56,7 @@ final readonly class PhpTarget
         $types = new TypeMapper($schema, $names);
 
         $entities = new EntityGenerator($schema, $names, $types, $emitter);
-        $mutators = new MutatorGenerator($names, $types, $emitter);
+        $mutators = new MutatorGenerator($schema, $names, $types, $emitter);
         $finders = new FinderGenerator($schema, $names, $types, $emitter);
         $contracts = new ContractGenerator($schema, $names, $types, $emitter);
         $contexts = new ContextGenerator($names, $types, $emitter);
@@ -64,10 +65,15 @@ final readonly class PhpTarget
         $hydrators = new HydratorGenerator($schema, $names, $types, $emitter);
         $deleters = new DeleterGenerator($schema, $names, $emitter);
         $inputs = new InputGenerator($schema, $names, $types, $emitter);
+        $patterns = new PatternGenerator($schema, $names, $types, $emitter);
 
         $files = $enums->generate($schema);
 
         foreach ($contracts->processors() as $file) {
+            $files[] = $file;
+        }
+
+        foreach ($patterns->generate() as $file) {
             $files[] = $file;
         }
 

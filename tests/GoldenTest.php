@@ -34,7 +34,7 @@ final class GoldenTest extends TestCase
      */
     public static function cases(): array
     {
-        return ['the canonical spec' => ['valid'], 'the worked example' => ['clog']];
+        return ['the canonical spec' => ['valid'], 'the worked example' => ['clog'], 'a pattern-generated interface and trait' => ['patterns']];
     }
 
     #[DataProvider('cases')]

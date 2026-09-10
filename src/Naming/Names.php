@@ -151,6 +151,31 @@ final readonly class Names
         return $this->enum($entity->name . ucfirst($field->name));
     }
 
+    /**
+     * A pattern's shared interface, named after the pattern itself — Auditable, not
+     * PostAuditable — because every entity using it implements the same one.
+     *
+     * Outside the entity folders, like Type/ and Enum/: a pattern belongs to no single
+     * entity, and filing it under whichever one happened to use it first would be
+     * arbitrary.
+     */
+    public function patternContract(string $pattern): string
+    {
+        return $this->config->namespaceFor('Pattern', $pattern, $pattern);
+    }
+
+    /**
+     * The trait an entity's mutator `use`s to pick up the pattern's setters.
+     *
+     * A trait rather than a base class: PHP allows one parent but many traits, and two
+     * patterns on the same entity both wanting to contribute setters is not a
+     * hypothetical — Auditable and SoftDeletable can both apply to Post.
+     */
+    public function patternMutatorTrait(string $pattern): string
+    {
+        return $this->config->namespaceFor('Pattern', $pattern, $pattern . 'MutatorTrait');
+    }
+
     private function member(EntityDefinition $entity, string $suffix): string
     {
         return $this->config->namespaceFor($entity->name, $entity->name . $suffix);
