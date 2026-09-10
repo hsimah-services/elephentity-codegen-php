@@ -398,9 +398,19 @@ final class PhpTargetTest extends TestCase
         $catalogue = $this->file('Catalogue.php');
 
         self::assertStringContainsString(
-            "'Post' => new PostMutator(\$buffer, \$this->container->get(PostPublishAction::class))",
+            "'Post' => new PostMutator(\$buffer, \$this->resolve(PostPublishAction::class))",
             $catalogue,
         );
+    }
+
+    public function testAnActionHandlerIsAssertedBeforeItReachesTheMutatorConstructor(): void
+    {
+        // ContainerInterface::get() returns mixed; the mutator constructor wants a
+        // specific handler type, and only an assert in between satisfies PHPStan.
+        $catalogue = $this->file('Catalogue.php');
+
+        self::assertStringContainsString('$service = $this->container->get($class);', $catalogue);
+        self::assertStringContainsString('assert($service instanceof $class);', $catalogue);
     }
 
     public function testAnInputApplierOnlyTouchesKeysThatWereSupplied(): void
