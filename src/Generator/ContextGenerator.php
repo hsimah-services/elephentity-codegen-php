@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Eleph\Gen\Php\Generator;
 
 use Eleph\Gen\Php\GeneratedFile;
+use Eleph\Gen\Php\Ir\Cardinality;
+use Eleph\Gen\Php\Ir\EdgeDefinition;
 use Eleph\Gen\Php\Ir\EntityDefinition;
 use Eleph\Gen\Php\Ir\FieldDefinition;
 use Eleph\Gen\Php\Naming\Emitter;
 use Eleph\Gen\Php\Naming\Names;
 use Eleph\Gen\Php\Naming\TypeMapper;
 use Eleph\Gen\Php\Runtime;
+use Nette\PhpGenerator\ClassType;
 
 /**
  * Emits the two kinds of context: an action's narrow write surface, and an entity's
@@ -148,6 +151,17 @@ final readonly class ContextGenerator
             ->setBody('return $this->context->changes();')
             ->addComment('@return array<string, mixed>');
 
+        $pendingEdge = $type->addMethod('pendingEdge')
+            ->setReturnType('array')
+            ->setBody('return $this->context->pendingEdge($edge);')
+            ->addComment('@return list<' . $this->emitter->shortName(Runtime::IDENTIFIER) . '>');
+        $pendingEdge->addParameter('edge')->setType('string');
+
+        $edgeChanged = $type->addMethod('isEdgeChanged')
+            ->setReturnType('bool')
+            ->setBody('return $this->context->isEdgeChanged($edge);');
+        $edgeChanged->addParameter('edge')->setType('string');
+
         foreach ($entity->fields as $field) {
             $phpType = $this->types->forField($entity, $field);
 
@@ -165,9 +179,48 @@ final readonly class ContextGenerator
             }
         }
 
+        // Unconditional: pendingEdge()'s own docblock names Identifier even on an
+        // entity with no edges of its own, because it exists to satisfy the interface.
+        $namespace->addUse(Runtime::IDENTIFIER);
+
+        foreach ($entity->edges as $edge) {
+            $this->addEdgeAccessors($type, $edge);
+        }
+
         $this->emitter->namedConstructor($type, $constructor);
 
         return $this->emitter->file($class, $namespace);
+    }
+
+    /**
+     * Typed per-edge reads, mirroring the mutator's own to-one/to-many split: a
+     * to-one edge narrows to at most one Identifier, a to-many edge stays a list. The
+     * underlying context is cardinality-agnostic (pendingEdge() always returns a
+     * list), so narrowing to one is this generator's job, same as a field's scalar
+     * assert() is.
+     */
+    private function addEdgeAccessors(ClassType $type, EdgeDefinition $edge): void
+    {
+        $pendingName = 'pending' . ucfirst($edge->name);
+
+        if (Cardinality::One === $edge->cardinality) {
+            $type->addMethod($pendingName)
+                ->setReturnType(Runtime::IDENTIFIER)
+                ->setReturnNullable(true)
+                ->setBody(sprintf(
+                    'return $this->context->pendingEdge(%s)[0] ?? null;',
+                    var_export($edge->name, true),
+                ));
+        } else {
+            $type->addMethod($pendingName)
+                ->setReturnType('array')
+                ->setBody(sprintf('return $this->context->pendingEdge(%s);', var_export($edge->name, true)))
+                ->addComment('@return list<' . $this->emitter->shortName(Runtime::IDENTIFIER) . '>');
+        }
+
+        $type->addMethod('is' . ucfirst($edge->name) . 'Changed')
+            ->setReturnType('bool')
+            ->setBody(sprintf('return $this->context->isEdgeChanged(%s);', var_export($edge->name, true)));
     }
 
     /**
