@@ -75,6 +75,7 @@ final readonly class CatalogueGenerator
 
         $this->addPerEntityList($type, 'fieldNames', $this->fieldNames());
         $this->addPerEntityList($type, 'requiredFields', $this->requiredFields());
+        $this->addPerEntityList($type, 'requiredEdges', $this->requiredEdges());
         $this->addPerEntityList($type, 'uniqueFields', $this->uniqueFields());
         $this->addManagedFields($type, $namespace);
         $this->addDeletionRules($type, $namespace);
@@ -197,6 +198,33 @@ final readonly class CatalogueGenerator
             foreach ($entity->fields as $field) {
                 if ($field->required && !$field->hasDefault && null === $field->managed) {
                     $names[] = $field->name;
+                }
+            }
+
+            $required[$entity->name] = $names;
+        }
+
+        return $required;
+    }
+
+    /**
+     * To-one edges a create must attach.
+     *
+     * The schema compiler has already refused required: true on anything but a
+     * cardinality: one edge, so nothing here re-checks that.
+     *
+     * @return array<string, list<string>>
+     */
+    private function requiredEdges(): array
+    {
+        $required = [];
+
+        foreach ($this->schema->entities as $entity) {
+            $names = [];
+
+            foreach ($entity->edges as $edge) {
+                if ($edge->required) {
+                    $names[] = $edge->name;
                 }
             }
 
