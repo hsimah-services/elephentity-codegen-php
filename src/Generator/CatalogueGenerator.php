@@ -80,10 +80,14 @@ final readonly class CatalogueGenerator
         $this->addManagedFields($type, $namespace);
         $this->addDeletionRules($type, $namespace);
         $this->addFinder($type, $namespace);
-        $this->addMutatorFactory($type, $namespace);
+        $hasActions = $this->addMutatorFactory($type, $namespace);
         $this->addQueryArguments($type);
         $this->addApply($type, $namespace);
         $this->addContracts($type);
+
+        if ($hasActions) {
+            $this->addResolve($type);
+        }
 
         return $this->emitter->file($class, $namespace);
     }
@@ -337,9 +341,10 @@ final readonly class CatalogueGenerator
             ->addParameter('entity')->setType('string');
     }
 
-    private function addMutatorFactory(\Nette\PhpGenerator\ClassType $type, \Nette\PhpGenerator\PhpNamespace $namespace): void
+    private function addMutatorFactory(\Nette\PhpGenerator\ClassType $type, \Nette\PhpGenerator\PhpNamespace $namespace): bool
     {
         $arms = [];
+        $hasActions = false;
 
         foreach ($this->schema->entities as $entity) {
             $mutator = $this->names->mutator($entity);
@@ -350,7 +355,8 @@ final readonly class CatalogueGenerator
             foreach ($entity->actions as $action) {
                 $handler = $this->names->actionHandler($entity, $action->name);
                 $namespace->addUse($handler);
-                $handlers[] = sprintf('$this->container->get(%s::class)', $this->emitter->shortName($handler));
+                $handlers[] = sprintf('$this->resolve(%s::class)', $this->emitter->shortName($handler));
+                $hasActions = true;
             }
 
             $arms[] = sprintf(
@@ -370,6 +376,29 @@ final readonly class CatalogueGenerator
 
         $method->addParameter('entity')->setType('string');
         $method->addParameter('buffer')->setType(Runtime::MUTATION_BUFFER);
+
+        return $hasActions;
+    }
+
+    /**
+     * Resolves a container value into the type its caller actually needs.
+     *
+     * `ContainerInterface::get()` returns `mixed`, so every call site that hands the
+     * result straight to a typed parameter needs an assert in between — this is the one
+     * place that does it, generic over the class asked for, rather than repeating the
+     * assert at every action handler a mutator takes.
+     */
+    private function addResolve(\Nette\PhpGenerator\ClassType $type): void
+    {
+        $method = $type->addMethod('resolve')
+            ->setReturnType('object')
+            ->setBody("\$service = \$this->container->get(\$class);\n\nassert(\$service instanceof \$class);\n\nreturn \$service;")
+            ->addComment('@template T of object')
+            ->addComment('@param class-string<T> $class')
+            ->addComment('@return T')
+            ->setPrivate();
+
+        $method->addParameter('class')->setType('string');
     }
 
     private function addQueryArguments(\Nette\PhpGenerator\ClassType $type): void
