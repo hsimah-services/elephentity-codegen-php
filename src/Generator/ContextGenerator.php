@@ -122,11 +122,16 @@ final readonly class ContextGenerator
         $type->setReadOnly();
         $type->addImplement(Runtime::MUTATION_CONTEXT);
         $type->addComment(sprintf('A pending %s mutation, with exact types.', $entity->name));
+        $namespace->addUse(Runtime::IDENTIFIER);
 
         $constructor = $type->addMethod('__construct');
         $constructor->addPromotedParameter('context')
             ->setType(Runtime::MUTATION_CONTEXT)
             ->setPrivate();
+
+        $type->addMethod('id')
+            ->setReturnType(Runtime::IDENTIFIER)
+            ->setBody('return $this->context->id();');
 
         foreach (['entity' => 'string', 'isCreate' => 'bool'] as $method => $returns) {
             $type->addMethod($method)
