@@ -68,6 +68,7 @@ final class PhpTargetTest extends TestCase
             'Tag/TagVerifiers.php',
             'Type/MoneyReadProcessor.php',
             'Type/MoneyWriteProcessor.php',
+            'Wiring.php',
             'class-map.php',
         ], $paths);
     }
@@ -344,6 +345,76 @@ final class PhpTargetTest extends TestCase
     {
         // Tag has no declared types, so its hydrator takes the decoder and nothing else.
         self::assertStringNotContainsString('Reader', $this->file('Tag/TagHydrator.php'));
+    }
+
+    public function testWiringThreadsEveryContractADeclaredTypeFieldNeedsIntoBothHydratorAndInput(): void
+    {
+        // Post.price is a Money field: the exact case a hand-typed Bootstrap.php got
+        // wrong, because nothing about reading the code flags that this entity's
+        // hydrator and input take a second constructor argument every other entity's
+        // don't.
+        $wiring = $this->file('Wiring.php');
+
+        self::assertStringContainsString(
+            'PostHydrator::class => static fn (ContainerInterface $c): object => '
+                . 'new PostHydrator($c->get(ValueDecoder::class), $c->get(MoneyReadProcessor::class)),',
+            $wiring,
+        );
+        self::assertStringContainsString(
+            'PostInput::class => static fn (ContainerInterface $c): object => '
+                . 'new PostInput($c->get(ValueDecoder::class), $c->get(MoneyReadProcessor::class)),',
+            $wiring,
+        );
+    }
+
+    public function testWiringThreadsATriggersVerifiersAndFinderContractsInDeclarationOrder(): void
+    {
+        $wiring = $this->file('Wiring.php');
+
+        self::assertStringContainsString(
+            'PostTriggers::class => static fn (ContainerInterface $c): object => '
+                . 'new PostTriggers($c->get(PostAuditTrigger::class), $c->get(PostReindexTrigger::class)),',
+            $wiring,
+        );
+        self::assertStringContainsString(
+            'PostVerifiers::class => static fn (ContainerInterface $c): object => '
+                . 'new PostVerifiers($c->get(PostPriceVerifier::class)),',
+            $wiring,
+        );
+        self::assertStringContainsString(
+            'PostFinder::class => static fn (ContainerInterface $c): object => '
+                . 'new PostFinder($c->get(PostPublishedQuery::class)),',
+            $wiring,
+        );
+    }
+
+    public function testWiringGivesAnEntityWithNothingToInjectAnEmptyConstructorCall(): void
+    {
+        // Tag has no triggers, no verified fields and no queries — its bridges still
+        // need registering, just with nothing to thread through.
+        $wiring = $this->file('Wiring.php');
+
+        self::assertStringContainsString(
+            'TagTriggers::class => static fn (ContainerInterface $c): object => new TagTriggers(),',
+            $wiring,
+        );
+        self::assertStringContainsString(
+            'TagVerifiers::class => static fn (ContainerInterface $c): object => new TagVerifiers(),',
+            $wiring,
+        );
+    }
+
+    public function testWiringNeverListsTheHandWrittenContractBindingsThemselves(): void
+    {
+        // Actions are resolved at call time through the catalogue's own resolve(),
+        // never registered here — an action handler is a hand-written Contract
+        // binding, exactly like a trigger or verifier handler, not a generated class.
+        self::assertStringNotContainsString('PostPublishAction', $this->file('Wiring.php'));
+    }
+
+    public function testWiringGetsNoEntryForAnEntityWithNoQueries(): void
+    {
+        self::assertStringNotContainsString('CommentFinder', $this->file('Wiring.php'));
     }
 
     public function testADeleterKnowsWhatDependsOnItsEntity(): void
