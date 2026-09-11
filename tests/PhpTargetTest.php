@@ -357,12 +357,12 @@ final class PhpTargetTest extends TestCase
 
         self::assertStringContainsString(
             'PostHydrator::class => static fn (ContainerInterface $c): object => '
-                . 'new PostHydrator($c->get(ValueDecoder::class), $c->get(MoneyReadProcessor::class)),',
+                . 'new PostHydrator(self::resolve($c, ValueDecoder::class), self::resolve($c, MoneyReadProcessor::class)),',
             $wiring,
         );
         self::assertStringContainsString(
             'PostInput::class => static fn (ContainerInterface $c): object => '
-                . 'new PostInput($c->get(ValueDecoder::class), $c->get(MoneyReadProcessor::class)),',
+                . 'new PostInput(self::resolve($c, ValueDecoder::class), self::resolve($c, MoneyReadProcessor::class)),',
             $wiring,
         );
     }
@@ -373,19 +373,30 @@ final class PhpTargetTest extends TestCase
 
         self::assertStringContainsString(
             'PostTriggers::class => static fn (ContainerInterface $c): object => '
-                . 'new PostTriggers($c->get(PostAuditTrigger::class), $c->get(PostReindexTrigger::class)),',
+                . 'new PostTriggers(self::resolve($c, PostAuditTrigger::class), self::resolve($c, PostReindexTrigger::class)),',
             $wiring,
         );
         self::assertStringContainsString(
             'PostVerifiers::class => static fn (ContainerInterface $c): object => '
-                . 'new PostVerifiers($c->get(PostPriceVerifier::class)),',
+                . 'new PostVerifiers(self::resolve($c, PostPriceVerifier::class)),',
             $wiring,
         );
         self::assertStringContainsString(
             'PostFinder::class => static fn (ContainerInterface $c): object => '
-                . 'new PostFinder($c->get(PostPublishedQuery::class)),',
+                . 'new PostFinder(self::resolve($c, PostPublishedQuery::class)),',
             $wiring,
         );
+    }
+
+    public function testWiringNarrowsWhatTheContainerHandsBackBeforeConstructing(): void
+    {
+        // ContainerInterface::get() returns mixed, so every arm above needs this
+        // exact narrowing step before PHPStan level max accepts the constructor
+        // call — the same reason Catalogue::resolve() exists.
+        $wiring = $this->file('Wiring.php');
+
+        self::assertStringContainsString('private static function resolve(ContainerInterface $c, string $class): object', $wiring);
+        self::assertStringContainsString('assert($service instanceof $class);', $wiring);
     }
 
     public function testWiringGivesAnEntityWithNothingToInjectAnEmptyConstructorCall(): void
