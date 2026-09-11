@@ -17,6 +17,7 @@ use Eleph\Gen\Php\Generator\HydratorGenerator;
 use Eleph\Gen\Php\Generator\InputGenerator;
 use Eleph\Gen\Php\Generator\MutatorGenerator;
 use Eleph\Gen\Php\Generator\PatternGenerator;
+use Eleph\Gen\Php\Generator\WiringGenerator;
 use Eleph\Gen\Php\Ir\Schema;
 use Eleph\Gen\Php\Naming\Emitter;
 use Eleph\Gen\Php\Naming\Names;
@@ -105,6 +106,7 @@ final readonly class PhpTarget
         }
 
         $files[] = (new CatalogueGenerator($schema, $names, $emitter))->generate();
+        $files[] = (new WiringGenerator($schema, $names, $emitter))->generate();
 
         // Last, and over the finished list: it is an index of everything above it.
         $files[] = (new ClassMapGenerator($schema, $config, $names))->generate($files);

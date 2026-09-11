@@ -86,6 +86,15 @@ final readonly class Names
         return $this->config->namespaceFor('Catalogue');
     }
 
+    /**
+     * The one class listing every generated class's container factory, beside
+     * `Catalogue` for the same reason: it is about the project, not one entity.
+     */
+    public function wiring(): string
+    {
+        return $this->config->namespaceFor('Wiring');
+    }
+
     public function actionContext(EntityDefinition $entity, string $action): string
     {
         return $this->member($entity, ucfirst($action) . 'Context');
