@@ -80,7 +80,33 @@ final readonly class WiringGenerator
             ->addComment('')
             ->addComment('@return array<class-string, Closure(ContainerInterface): object>');
 
+        if ([] !== $this->schema->entities) {
+            $this->addResolve($type);
+        }
+
         return $this->emitter->file($class, $namespace);
+    }
+
+    /**
+     * Narrows what `ContainerInterface::get()` hands back, the same way and for the
+     * same reason as `CatalogueGenerator::resolve()`: PSR-11 says `mixed`, and every
+     * arm above hands the result straight to a strictly-typed constructor parameter.
+     * One generic assert here is what makes that pass level max instead of every arm
+     * repeating it.
+     */
+    private function addResolve(\Nette\PhpGenerator\ClassType $type): void
+    {
+        $method = $type->addMethod('resolve')
+            ->setStatic()
+            ->setReturnType('object')
+            ->setBody("\$service = \$c->get(\$class);\n\nassert(\$service instanceof \$class);\n\nreturn \$service;")
+            ->addComment('@template T of object')
+            ->addComment('@param class-string<T> $class')
+            ->addComment('@return T')
+            ->setPrivate();
+
+        $method->addParameter('c')->setType(ContainerInterface::class);
+        $method->addParameter('class')->setType('string');
     }
 
     private function hydratorEntry(EntityDefinition $entity, PhpNamespace $namespace): string
@@ -148,7 +174,7 @@ final readonly class WiringGenerator
 
     private function decodeArg(): string
     {
-        return sprintf('$c->get(%s::class)', $this->emitter->shortName(Runtime::VALUE_DECODER));
+        return sprintf('self::resolve($c, %s::class)', $this->emitter->shortName(Runtime::VALUE_DECODER));
     }
 
     private function processorArg(string $typeName, PhpNamespace $namespace): string
@@ -160,7 +186,7 @@ final readonly class WiringGenerator
     {
         $namespace->addUse($class);
 
-        return sprintf('$c->get(%s::class)', $this->emitter->shortName($class));
+        return sprintf('self::resolve($c, %s::class)', $this->emitter->shortName($class));
     }
 
     /**
