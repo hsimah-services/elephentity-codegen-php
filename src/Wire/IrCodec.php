@@ -11,6 +11,7 @@ use Eleph\Gen\Php\Ir\EdgeDefinition;
 use Eleph\Gen\Php\Ir\EntityDefinition;
 use Eleph\Gen\Php\Ir\FieldDefinition;
 use Eleph\Gen\Php\Ir\PatternDeclaration;
+use Eleph\Gen\Php\Ir\PolicyDefinition;
 use Eleph\Gen\Php\Ir\ProjectDefinition;
 use Eleph\Gen\Php\Ir\QueryDefinition;
 use Eleph\Gen\Php\Ir\Schema;
@@ -50,7 +51,7 @@ final readonly class IrCodec
      * a default does not qualify, because a builder that ignores it still generates
      * correct output.
      */
-    public const VERSION = '1.0';
+    public const VERSION = '1.1';
 
     /**
      * What each array-typed constructor parameter holds.
@@ -74,10 +75,14 @@ final readonly class IrCodec
             'queries' => QueryDefinition::class,
             'actions' => ActionDefinition::class,
             'triggers' => TriggerDefinition::class,
+            'readPolicies' => PolicyDefinition::class,
+            'writePolicies' => PolicyDefinition::class,
         ],
         PatternDeclaration::class => [
             'fields' => FieldDefinition::class,
             'edges' => EdgeDefinition::class,
+            'readPolicies' => PolicyDefinition::class,
+            'writePolicies' => PolicyDefinition::class,
         ],
         QueryDefinition::class => ['arguments' => ArgumentDefinition::class],
         ActionDefinition::class => ['arguments' => ArgumentDefinition::class],
@@ -99,8 +104,8 @@ final readonly class IrCodec
      */
     private const MAPS = [
         Schema::class => ['entities', 'types', 'patterns'],
-        EntityDefinition::class => ['fields', 'edges', 'queries', 'actions', 'triggers', 'config'],
-        PatternDeclaration::class => ['fields', 'edges'],
+        EntityDefinition::class => ['fields', 'edges', 'queries', 'actions', 'triggers', 'readPolicies', 'writePolicies', 'config'],
+        PatternDeclaration::class => ['fields', 'edges', 'readPolicies', 'writePolicies'],
         ActionDefinition::class => ['arguments'],
         QueryDefinition::class => ['arguments'],
     ];

@@ -104,6 +104,98 @@ final readonly class ContextGenerator
     }
 
     /**
+     * @return list<GeneratedFile>
+     */
+    public function actionArguments(EntityDefinition $entity): array
+    {
+        $files = [];
+
+        foreach ($entity->actions as $action) {
+            $class = $this->names->actionArguments($entity, $action->name);
+            $namespace = $this->emitter->open($class);
+            $type = $namespace->addClass($this->emitter->shortName($class));
+            $type->setFinal()->setReadOnly();
+            $constructor = $type->addMethod('__construct');
+            foreach ($action->arguments as $argument) {
+                $valueType = $this->types->forArgument($argument);
+                if (!in_array($valueType, self::SCALARS, true)) {
+                    $namespace->addUse($valueType);
+                }
+                $constructor->addPromotedParameter($argument->name)
+                    ->setType($valueType)
+                    ->setNullable($argument->nullable)
+                    ->setPublic();
+            }
+            $factory = $type->addMethod('of')->setStatic()->setReturnType($this->emitter->shortName($class));
+            $factory->addParameter('arguments')->setType('array');
+            $lines = [];
+            $values = [];
+            foreach ($action->arguments as $argument) {
+                $valueType = $this->types->forArgument($argument);
+                $check = match ($valueType) {
+                    'string' => 'is_string', 'int' => 'is_int', 'float' => 'is_float',
+                    'bool' => 'is_bool', 'array' => 'is_array',
+                    default => sprintf('$arguments[%s] instanceof %s', var_export($argument->name, true), $this->emitter->shortName($valueType)),
+                };
+                $test = in_array($valueType, self::SCALARS, true)
+                    ? sprintf('%s($arguments[%s])', $check, var_export($argument->name, true))
+                    : $check;
+                if ($argument->nullable) {
+                    $test = sprintf('null === $arguments[%s] || %s', var_export($argument->name, true), $test);
+                }
+                $lines[] = sprintf('assert(%s);', $test);
+                $values[] = '$arguments[' . var_export($argument->name, true) . ']';
+            }
+            $lines[] = sprintf('return new self(%s);', implode(', ', $values));
+            $factory->setBody(implode("\n", $lines));
+            $files[] = $this->emitter->file($class, $namespace);
+        }
+
+        return $files;
+    }
+
+    public function writeContext(EntityDefinition $entity): GeneratedFile
+    {
+        $class = $this->names->writeContext($entity);
+        $namespace = $this->emitter->open($class);
+        $namespace->addUse(Runtime::WRITE_CONTEXT);
+        $namespace->addUse(Runtime::WRITE_OPERATION);
+        $namespace->addUse(Runtime::MUTATION_CONTEXT);
+        $namespace->addUse($this->names->entity($entity));
+        $type = $namespace->addClass($this->emitter->shortName($class));
+        $type->setFinal()->setReadOnly()->addImplement(Runtime::WRITE_CONTEXT);
+        $type->addMethod('__construct')->addPromotedParameter('context')->setType(Runtime::WRITE_CONTEXT)->setPrivate();
+        $factory = $type->addMethod('of')->setStatic()->setReturnType('self');
+        $factory->addParameter('context')->setType(Runtime::WRITE_CONTEXT);
+        $factory->setBody('return new self($context);');
+        foreach ([
+            'entity' => ['string', false], 'operation' => [Runtime::WRITE_OPERATION, false], 'action' => ['string', true],
+            'arguments' => ['array', false], 'mutation' => [Runtime::MUTATION_CONTEXT, true],
+        ] as $method => [$returnType, $nullable]) {
+            $methodObject = $type->addMethod($method)->setPublic()->setReturnType($returnType)->setReturnNullable($nullable);
+            $methodObject->setBody(sprintf('return $this->context->%s();', $method));
+        }
+        foreach ($entity->fields as $field) {
+            $valueType = $this->types->forField($entity, $field);
+            if (!in_array($valueType, self::SCALARS, true)) {
+                $namespace->addUse($valueType);
+            }
+            foreach (['original', 'pending'] as $side) {
+                $methodObject = $type->addMethod($side . ucfirst($field->name))->setReturnType($valueType)->setReturnNullable(true);
+                $methodObject->setBody($this->writeFieldBody($side, $field, $valueType));
+            }
+        }
+        foreach ($entity->actions as $action) {
+            $arguments = $this->names->actionArguments($entity, $action->name);
+            $namespace->addUse($arguments);
+            $methodObject = $type->addMethod($action->name)->setReturnType($this->emitter->shortName($arguments))->setReturnNullable(true);
+            $methodObject->setBody(sprintf("return '%s' === \$this->context->action() ? %s::of(\$this->context->arguments()) : null;", $action->name, $this->emitter->shortName($arguments)));
+        }
+
+        return $this->emitter->file($class, $namespace);
+    }
+
+    /**
      * An entity's mutation context, typed.
      *
      * Shared type processors take the generic MutationContext and its stringly-typed
@@ -247,6 +339,25 @@ final readonly class ContextGenerator
 
         return sprintf(
             "\$value = \$this->context->%s(%s);\nassert(null === \$value || %s);\n\nreturn \$value;",
+            $side,
+            var_export($field->name, true),
+            $check,
+        );
+    }
+
+    private function writeFieldBody(string $side, FieldDefinition $field, string $phpType): string
+    {
+        $check = match ($phpType) {
+            'string' => 'is_string($value)',
+            'int' => 'is_int($value)',
+            'float' => 'is_float($value)',
+            'bool' => 'is_bool($value)',
+            'array' => 'is_array($value)',
+            default => sprintf('$value instanceof %s', $this->emitter->shortName($phpType)),
+        };
+
+        return sprintf(
+            "\$value = \$this->context->mutation()?->%s(%s);\nassert(null === \$value || %s);\n\nreturn \$value;",
             $side,
             var_export($field->name, true),
             $check,

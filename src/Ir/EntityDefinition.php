@@ -21,6 +21,8 @@ final readonly class EntityDefinition
      * @param list<string>                        $appliedPatterns Every pattern that actually
      *                                                              applies, transitively-pulled
      *                                                              ones included.
+    * @param array<string, PolicyDefinition>     $readPolicies
+    * @param array<string, PolicyDefinition>     $writePolicies
      */
     public function __construct(
         public string $name,
@@ -36,6 +38,10 @@ final readonly class EntityDefinition
         public array $config = [],
         public array $integrations = [],
         public array $appliedPatterns = [],
+        public array $readPolicies = [],
+        public array $writePolicies = [],
+        public TerminalRule $terminalRead = TerminalRule::Deny,
+        public TerminalRule $terminalWrite = TerminalRule::Deny,
     ) {
     }
 

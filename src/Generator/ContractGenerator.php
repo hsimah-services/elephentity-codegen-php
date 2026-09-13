@@ -8,6 +8,7 @@ use Eleph\Gen\Php\GeneratedFile;
 use Eleph\Gen\Php\Ir\ArgumentDefinition;
 use Eleph\Gen\Php\Ir\Cardinality;
 use Eleph\Gen\Php\Ir\EntityDefinition;
+use Eleph\Gen\Php\Ir\PatternDeclaration;
 use Eleph\Gen\Php\Ir\Schema;
 use Eleph\Gen\Php\Naming\Emitter;
 use Eleph\Gen\Php\Naming\Names;
@@ -49,7 +50,107 @@ final readonly class ContractGenerator
             ...$this->actions($entity),
             ...$this->triggers($entity),
             ...$this->verifiers($entity),
+            ...$this->policies($entity),
         ];
+    }
+
+    /**
+     * @return list<GeneratedFile>
+     */
+    public function patternPolicies(): array
+    {
+        $files = [];
+
+        foreach ($this->schema->patterns as $pattern) {
+            $files = [...$files, ...$this->patternPolicyFiles($pattern)];
+        }
+
+        return $files;
+    }
+
+    /**
+     * @return list<GeneratedFile>
+     */
+    private function policies(EntityDefinition $entity): array
+    {
+        $files = [];
+
+        foreach ($entity->readPolicies as $policy) {
+            if (!$policy->declaredIn()->isPattern()) {
+                $files[] = $this->policy($entity, $policy->name, false);
+            }
+        }
+
+        foreach ($entity->writePolicies as $policy) {
+            if (!$policy->declaredIn()->isPattern()) {
+                $files[] = $this->policy($entity, $policy->name, true);
+            }
+        }
+
+        return $files;
+    }
+
+    /** @return list<GeneratedFile> */
+    private function patternPolicyFiles(PatternDeclaration $pattern): array
+    {
+        $files = [];
+
+        foreach ($pattern->readPolicies as $policy) {
+            $files[] = $this->patternPolicy($pattern, $policy->name, false);
+        }
+
+        foreach ($pattern->writePolicies as $policy) {
+            $files[] = $this->patternPolicy($pattern, $policy->name, true);
+        }
+
+        return $files;
+    }
+
+    private function policy(EntityDefinition $entity, string $policy, bool $write): GeneratedFile
+    {
+        $name = $write
+            ? $this->names->writePolicyHandler($entity, $policy)
+            : $this->names->readPolicyHandler($entity, $policy);
+        $namespace = $this->emitter->open($name);
+        $namespace->addUse(Runtime::POLICY_DECISION);
+        $namespace->addUse(Runtime::VIEWER);
+        $namespace->addUse($this->names->entity($entity));
+
+        $interface = $namespace->addInterface($this->emitter->shortName($name));
+        $interface->addComment(sprintf('Application policy %s for %s.', $policy, $entity->name));
+        $method = $interface->addMethod('decide')->setPublic()->setReturnType(Runtime::POLICY_DECISION);
+        $method->addParameter('entity')->setType($this->names->entity($entity))->setNullable($write);
+        if ($write) {
+            $context = $this->names->writeContext($entity);
+            $namespace->addUse($context);
+            $method->addParameter('context')->setType($context);
+        }
+        $method->addParameter('viewer')->setType(Runtime::VIEWER);
+
+        return $this->emitter->file($name, $namespace);
+    }
+
+    private function patternPolicy(PatternDeclaration $pattern, string $policy, bool $write): GeneratedFile
+    {
+        $name = $write
+            ? $this->names->patternWritePolicyHandler($pattern->name, $policy)
+            : $this->names->patternReadPolicyHandler($pattern->name, $policy);
+        $namespace = $this->emitter->open($name);
+        $namespace->addUse(Runtime::POLICY_DECISION);
+        $namespace->addUse(Runtime::VIEWER);
+        $patternType = $this->names->patternContract($pattern->name);
+        $namespace->addUse($patternType);
+
+        $interface = $namespace->addInterface($this->emitter->shortName($name));
+        $interface->addComment(sprintf('Application policy %s for pattern %s.', $policy, $pattern->name));
+        $method = $interface->addMethod('decide')->setPublic()->setReturnType(Runtime::POLICY_DECISION);
+        $method->addParameter('entity')->setType($patternType)->setNullable($write);
+        if ($write) {
+            $method->addParameter('context')->setType(Runtime::WRITE_CONTEXT);
+        }
+        $method->addParameter('viewer')->setType(Runtime::VIEWER);
+
+        return $this->emitter->file($name, $namespace);
     }
 
     /**

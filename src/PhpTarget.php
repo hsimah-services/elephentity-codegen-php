@@ -68,9 +68,13 @@ final readonly class PhpTarget
         $inputs = new InputGenerator($schema, $names, $types, $emitter);
         $patterns = new PatternGenerator($schema, $names, $types, $emitter);
 
+        /** @var list<GeneratedFile> $files */
         $files = $enums->generate($schema);
 
         foreach ($contracts->processors() as $file) {
+            $files[] = $file;
+        }
+        foreach ($contracts->patternPolicies() as $file) {
             $files[] = $file;
         }
 
@@ -99,6 +103,10 @@ final readonly class PhpTarget
             foreach ($contexts->actionContexts($entity) as $file) {
                 $files[] = $file;
             }
+            foreach ($contexts->actionArguments($entity) as $file) {
+                $files[] = $file;
+            }
+            $files[] = $contexts->writeContext($entity);
 
             foreach ($contracts->generate($entity) as $file) {
                 $files[] = $file;

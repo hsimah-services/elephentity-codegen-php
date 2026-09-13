@@ -53,7 +53,7 @@ final readonly class Envelope
      * `EnvelopeTest` asserts this matches the local `IrCodec::VERSION`, which catches
      * the other direction — a codec updated here without the constant moving with it.
      */
-    public const IR_VERSION = '1.0';
+    public const IR_VERSION = '1.1';
 
     /**
      * The two things this builder can be asked for.
