@@ -72,7 +72,7 @@ final readonly class HydratorGenerator
                 ->setPrivate();
         }
 
-        $arguments = ['$record->id', '$edges'];
+        $arguments = $this->schema->hasEdges($entity) ? ['$record->id', '$edges'] : ['$record->id'];
 
         foreach ($entity->fields as $field) {
             $arguments[] = sprintf('$this->%s($record)', $field->name);

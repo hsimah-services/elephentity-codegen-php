@@ -41,7 +41,12 @@ final readonly class EntityGenerator
         $namespace = $this->emitter->open($class);
 
         $namespace->addUse(Runtime::ENTITY_ID);
-        $namespace->addUse(Runtime::EDGE_LOADER);
+
+        $hasEdges = $this->schema->hasEdges($entity);
+
+        if ($hasEdges) {
+            $namespace->addUse(Runtime::EDGE_LOADER);
+        }
 
         $type = $namespace->addClass($this->emitter->shortName($class));
         $type->setFinal();
@@ -66,10 +71,12 @@ final readonly class EntityGenerator
             ->setPrivate()
             ->setReadOnly();
 
-        $constructor->addPromotedParameter('edges')
-            ->setType(Runtime::EDGE_LOADER)
-            ->setPrivate()
-            ->setReadOnly();
+        if ($hasEdges) {
+            $constructor->addPromotedParameter('edges')
+                ->setType(Runtime::EDGE_LOADER)
+                ->setPrivate()
+                ->setReadOnly();
+        }
 
         $type->addMethod('getId')
             ->setReturnType(Runtime::ENTITY_ID)
