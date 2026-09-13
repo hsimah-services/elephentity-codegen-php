@@ -188,7 +188,7 @@ final readonly class ContextGenerator
         foreach ($entity->actions as $action) {
             $arguments = $this->names->actionArguments($entity, $action->name);
             $namespace->addUse($arguments);
-            $methodObject = $type->addMethod($action->name)->setReturnType($this->emitter->shortName($arguments))->setReturnNullable(true);
+            $methodObject = $type->addMethod($action->name)->setReturnType($arguments)->setReturnNullable(true);
             $methodObject->setBody(sprintf("return '%s' === \$this->context->action() ? %s::of(\$this->context->arguments()) : null;", $action->name, $this->emitter->shortName($arguments)));
         }
 
