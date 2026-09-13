@@ -126,7 +126,8 @@ final readonly class ContextGenerator
                     ->setNullable($argument->nullable)
                     ->setPublic();
             }
-            $factory = $type->addMethod('of')->setStatic()->setReturnType('self');
+            $factory = $type->addMethod('of')->setStatic()->setReturnType('self')
+                ->addComment('@param array<string, mixed> $arguments');
             $factory->addParameter('arguments')->setType('array');
             $lines = [];
             $values = [];

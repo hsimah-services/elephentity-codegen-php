@@ -205,19 +205,20 @@ final readonly class InputGenerator
         );
     }
 
-    private function decode(Primitive $primitive, string $label, string $phpType): string
+    private function decode(Primitive $primitive, string $label, string $phpType, string $variable = '$value'): string
     {
         return match ($primitive) {
-            Primitive::String, Primitive::Text => sprintf('$this->decode->string($value, %s)', $label),
-            Primitive::Int => sprintf('$this->decode->int($value, %s)', $label),
-            Primitive::Float => sprintf('$this->decode->float($value, %s)', $label),
-            Primitive::Bool => sprintf('$this->decode->bool($value, %s)', $label),
-            Primitive::Datetime => sprintf('$this->decode->datetime($value, %s)', $label),
-            Primitive::Id => sprintf('$this->decode->id($value, %s)', $label),
-            Primitive::Json => sprintf('$this->decode->json($value, %s)', $label),
+            Primitive::String, Primitive::Text => sprintf('$this->decode->string(%s, %s)', $variable, $label),
+            Primitive::Int => sprintf('$this->decode->int(%s, %s)', $variable, $label),
+            Primitive::Float => sprintf('$this->decode->float(%s, %s)', $variable, $label),
+            Primitive::Bool => sprintf('$this->decode->bool(%s, %s)', $variable, $label),
+            Primitive::Datetime => sprintf('$this->decode->datetime(%s, %s)', $variable, $label),
+            Primitive::Id => sprintf('$this->decode->id(%s, %s)', $variable, $label),
+            Primitive::Json => sprintf('$this->decode->json(%s, %s)', $variable, $label),
             Primitive::Enum => sprintf(
-                '$this->decode->enum(%s::class, $value, %s)',
+                '$this->decode->enum(%s::class, %s, %s)',
                 $this->emitter->shortName($phpType),
+                $variable,
                 $label,
             ),
         };
@@ -264,19 +265,20 @@ final readonly class InputGenerator
     private function actionConversion(EntityDefinition $entity, string $action, ArgumentDefinition $argument): string
     {
         $key = var_export($argument->name, true);
+        $variable = sprintf('$args[%s]', $key);
         $label = var_export(sprintf('%s.%s.%s', $entity->name, $action, $argument->name), true);
         $phpType = $this->types->forArgument($argument);
         if ($argument->type->isPrimitive()) {
             assert(null !== $argument->type->primitive);
-            $decoded = $this->decode($argument->type->primitive, $label, $phpType);
+            $decoded = $this->decode($argument->type->primitive, $label, $phpType, $variable);
         } else {
             $declared = $this->schema->type((string) $argument->type->declaredType);
             $primitive = $declared->primitive ?? Primitive::String;
-            $decoded = sprintf('$this->%sReader->read(%s)', lcfirst((string) $argument->type->declaredType), $this->decode($primitive, $label, $phpType));
+            $decoded = sprintf('$this->%sReader->read(%s)', lcfirst((string) $argument->type->declaredType), $this->decode($primitive, $label, $phpType, $variable));
         }
 
         return $argument->nullable
-            ? sprintf('null === $args[%s] ? null : %s', $key, $decoded)
+            ? sprintf('null === %s ? null : %s', $variable, $decoded)
             : $decoded;
     }
 }
