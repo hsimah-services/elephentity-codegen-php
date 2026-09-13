@@ -52,6 +52,26 @@ final readonly class Names
         return $this->member($entity, 'MutationContext');
     }
 
+    public function readPolicies(EntityDefinition $entity): string
+    {
+        return $this->member($entity, 'ReadPolicies');
+    }
+
+    public function writePolicies(EntityDefinition $entity): string
+    {
+        return $this->member($entity, 'WritePolicies');
+    }
+
+    public function writeContext(EntityDefinition $entity): string
+    {
+        return $this->member($entity, 'WriteContext');
+    }
+
+    public function actionArguments(EntityDefinition $entity, string $action): string
+    {
+        return $this->member($entity, ucfirst($action) . 'Arguments');
+    }
+
     public function verifiers(EntityDefinition $entity): string
     {
         return $this->member($entity, 'Verifiers');
@@ -113,6 +133,26 @@ final readonly class Names
     public function triggerHandler(EntityDefinition $entity, string $trigger): string
     {
         return $this->contract($entity, ucfirst($trigger) . 'Trigger');
+    }
+
+    public function readPolicyHandler(EntityDefinition $entity, string $policy): string
+    {
+        return $this->contract($entity, ucfirst($policy) . 'ReadPolicy');
+    }
+
+    public function writePolicyHandler(EntityDefinition $entity, string $policy): string
+    {
+        return $this->contract($entity, ucfirst($policy) . 'WritePolicy');
+    }
+
+    public function patternReadPolicyHandler(string $pattern, string $policy): string
+    {
+        return $this->config->namespaceFor('Pattern', $pattern, self::CONTRACT, $pattern . ucfirst($policy) . 'ReadPolicy');
+    }
+
+    public function patternWritePolicyHandler(string $pattern, string $policy): string
+    {
+        return $this->config->namespaceFor('Pattern', $pattern, self::CONTRACT, $pattern . ucfirst($policy) . 'WritePolicy');
     }
 
     public function fieldVerifier(EntityDefinition $entity, FieldDefinition $field): string

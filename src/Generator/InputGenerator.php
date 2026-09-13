@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Eleph\Gen\Php\Generator;
 
 use Eleph\Gen\Php\GeneratedFile;
+use Eleph\Gen\Php\Ir\ArgumentDefinition;
 use Eleph\Gen\Php\Ir\Cardinality;
 use Eleph\Gen\Php\Ir\EdgeDefinition;
 use Eleph\Gen\Php\Ir\EntityDefinition;
@@ -53,9 +54,7 @@ final readonly class InputGenerator
         $namespace->addUse(Runtime::MUTATION_BUFFER);
         $namespace->addUse(Runtime::VALUE_DECODER);
 
-        if ([] !== $entity->edges) {
-            $namespace->addUse(InvalidArgumentException::class);
-        }
+        $namespace->addUse(InvalidArgumentException::class);
 
         $type = $namespace->addClass($this->emitter->shortName($class));
         $type->setFinal();
@@ -132,6 +131,25 @@ final readonly class InputGenerator
 
         $apply->addParameter('buffer')->setType(Runtime::MUTATION_BUFFER);
         $apply->addParameter('input')->setType('array');
+
+        $decodeAction = $type->addMethod('decodeAction')
+            ->setReturnType('array')
+            ->addComment('@param array<string, mixed> $args')
+            ->addComment('@return array<string, mixed>');
+        $decodeAction->addParameter('action')->setType('string');
+        $decodeAction->addParameter('args')->setType('array');
+        $arms = [];
+        foreach ($entity->actions as $action) {
+            $values = [];
+            foreach ($action->arguments as $argument) {
+                $values[] = var_export($argument->name, true) . ' => ' . $this->actionConversion($entity, $action->name, $argument);
+            }
+            $arms[] = sprintf('    %s => [%s],', var_export($action->name, true), implode(', ', $values));
+        }
+        $decodeAction->setBody(sprintf(
+            "return match (\$action) {\n%s\n    default => throw new InvalidArgumentException(sprintf('Unknown action %%s.', \$action)),\n};",
+            implode("\n", $arms),
+        ));
 
         return $this->emitter->file($class, $namespace);
     }
@@ -228,6 +246,37 @@ final readonly class InputGenerator
             $types[$name] = true;
         }
 
+        foreach ($entity->actions as $action) {
+            foreach ($action->arguments as $argument) {
+                $name = $argument->type->declaredType;
+                if (null !== $name) {
+                    $declared = $this->schema->type($name);
+                    if (null !== $declared && !$declared->isEnum() && $declared->hasProcessors) {
+                        $types[$name] = true;
+                    }
+                }
+            }
+        }
+
         return array_keys($types);
+    }
+
+    private function actionConversion(EntityDefinition $entity, string $action, ArgumentDefinition $argument): string
+    {
+        $key = var_export($argument->name, true);
+        $label = var_export(sprintf('%s.%s.%s', $entity->name, $action, $argument->name), true);
+        $phpType = $this->types->forArgument($argument);
+        if ($argument->type->isPrimitive()) {
+            assert(null !== $argument->type->primitive);
+            $decoded = $this->decode($argument->type->primitive, $label, $phpType);
+        } else {
+            $declared = $this->schema->type((string) $argument->type->declaredType);
+            $primitive = $declared->primitive ?? Primitive::String;
+            $decoded = sprintf('$this->%sReader->read(%s)', lcfirst((string) $argument->type->declaredType), $this->decode($primitive, $label, $phpType));
+        }
+
+        return $argument->nullable
+            ? sprintf('null === $args[%s] ? null : %s', $key, $decoded)
+            : $decoded;
     }
 }

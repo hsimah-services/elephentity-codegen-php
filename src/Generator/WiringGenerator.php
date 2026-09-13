@@ -63,6 +63,8 @@ final readonly class WiringGenerator
             $entries[] = $this->inputEntry($entity, $namespace);
             $entries[] = $this->triggersEntry($entity, $namespace);
             $entries[] = $this->verifiersEntry($entity, $namespace);
+            $entries[] = $this->policiesEntry($entity, false, $namespace);
+            $entries[] = $this->policiesEntry($entity, true, $namespace);
 
             $finder = $this->finderEntry($entity, $namespace);
 
@@ -155,6 +157,25 @@ final readonly class WiringGenerator
         }
 
         return $this->arm($this->names->verifiers($entity), $args, $namespace);
+    }
+
+    private function policiesEntry(EntityDefinition $entity, bool $write, PhpNamespace $namespace): string
+    {
+        $dispatcher = $write ? $this->names->writePolicies($entity) : $this->names->readPolicies($entity);
+        $args = [];
+        $policies = $write ? $entity->writePolicies : $entity->readPolicies;
+        foreach ($policies as $policy) {
+            $handler = $policy->declaredIn()->isPattern()
+                ? ($write
+                    ? $this->names->patternWritePolicyHandler((string) $policy->declaredIn()->pattern, $policy->name)
+                    : $this->names->patternReadPolicyHandler((string) $policy->declaredIn()->pattern, $policy->name))
+                : ($write
+                    ? $this->names->writePolicyHandler($entity, $policy->name)
+                    : $this->names->readPolicyHandler($entity, $policy->name));
+            $args[] = $this->contractArg($handler, $namespace);
+        }
+
+        return $this->arm($dispatcher, $args, $namespace);
     }
 
     private function finderEntry(EntityDefinition $entity, PhpNamespace $namespace): ?string

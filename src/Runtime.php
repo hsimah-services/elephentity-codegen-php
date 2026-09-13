@@ -30,6 +30,8 @@ final class Runtime
     public const EDGE_LOADER = 'Eleph\Runtime\Query\EdgeLoader';
     public const EDGE_MUTATION = 'Eleph\Runtime\Mutation\EdgeMutation';
     public const ENTITY_CATALOGUE = 'Eleph\Runtime\Catalogue\EntityCatalogue';
+    public const ENTITY_READ_POLICIES = 'Eleph\Runtime\Policy\EntityReadPolicies';
+    public const ENTITY_WRITE_POLICIES = 'Eleph\Runtime\Policy\EntityWritePolicies';
     public const ENTITY_ID = 'Eleph\Runtime\Identity\EntityId';
     public const ENTITY_QUERY = 'Eleph\Runtime\Query\EntityQuery';
     public const ENTITY_TRIGGERS = 'Eleph\Runtime\Mutation\EntityTriggers';
@@ -39,12 +41,18 @@ final class Runtime
     public const MANAGED = 'Eleph\Runtime\Mutation\Managed';
     public const MUTATION_BUFFER = 'Eleph\Runtime\Mutation\MutationBuffer';
     public const MUTATION_CONTEXT = 'Eleph\Runtime\Mutation\MutationContext';
+    public const NO_POLICIES = 'Eleph\Runtime\Policy\NoPolicies';
+    public const POLICY_DECISION = 'Eleph\Runtime\Policy\PolicyDecision';
+    public const POLICY_OUTCOME = 'Eleph\Runtime\Policy\PolicyOutcome';
     public const READ_PROCESSOR = 'Eleph\Runtime\Type\ReadProcessor';
     public const RECORD = 'Eleph\Runtime\Storage\Record';
     public const TRIGGER_EVENT = 'Eleph\Runtime\Trigger\TriggerEvent';
     public const TRIGGER_PHASE = 'Eleph\Runtime\Trigger\TriggerPhase';
     public const UNIT_OF_WORK = 'Eleph\Runtime\UnitOfWork\UnitOfWork';
     public const VALUE_DECODER = 'Eleph\Runtime\Query\ValueDecoder';
+    public const VIEWER = 'Eleph\Runtime\Policy\Viewer';
     public const VERIFICATION = 'Eleph\Runtime\Verification\Verification';
     public const WRITE_PROCESSOR = 'Eleph\Runtime\Type\WriteProcessor';
+    public const WRITE_CONTEXT = 'Eleph\Runtime\Policy\WriteContext';
+    public const WRITE_OPERATION = 'Eleph\Runtime\Policy\WriteOperation';
 }

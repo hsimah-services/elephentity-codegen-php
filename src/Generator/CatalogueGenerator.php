@@ -41,6 +41,7 @@ final readonly class CatalogueGenerator
 
         foreach ([
             Runtime::ENTITY_CATALOGUE, Runtime::ENTITY_TRIGGERS, Runtime::ENTITY_VERIFIERS,
+            Runtime::ENTITY_READ_POLICIES, Runtime::ENTITY_WRITE_POLICIES, Runtime::NO_POLICIES,
             Runtime::HYDRATOR, Runtime::MUTATION_BUFFER, Runtime::DELETION_RULE,
             ContainerInterface::class, RuntimeException::class,
         ] as $used) {
@@ -69,6 +70,8 @@ final readonly class CatalogueGenerator
         $this->resolver($type, 'hydrator', Runtime::HYDRATOR, fn (EntityDefinition $e): string => $this->names->hydrator($e), $namespace);
         $this->resolver($type, 'verifiers', Runtime::ENTITY_VERIFIERS, fn (EntityDefinition $e): string => $this->names->verifiers($e), $namespace);
         $this->resolver($type, 'triggers', Runtime::ENTITY_TRIGGERS, fn (EntityDefinition $e): string => $this->names->triggers($e), $namespace);
+        $this->policyResolver($type, 'readPolicies', Runtime::ENTITY_READ_POLICIES, false, $namespace);
+        $this->policyResolver($type, 'writePolicies', Runtime::ENTITY_WRITE_POLICIES, true, $namespace);
 
         $this->addMap($type, 'edgeTargets', $this->edgeTargets(), '"Entity.edge" => target entity');
         $this->addMap($type, 'fieldTypes', $this->fieldTypes(), '"Entity.field" => declared type');
@@ -82,6 +85,8 @@ final readonly class CatalogueGenerator
         $this->addFinder($type, $namespace);
         $hasActions = $this->addMutatorFactory($type, $namespace);
         $this->addQueryArguments($type);
+        $this->addActionArguments($type);
+        $this->addDecodeActionArguments($type, $namespace);
         $this->addApply($type, $namespace);
         $this->addContracts($type);
 
@@ -431,6 +436,99 @@ final readonly class CatalogueGenerator
         $method->addParameter('query')->setType('string');
     }
 
+    private function addActionArguments(\Nette\PhpGenerator\ClassType $type): void
+    {
+        $arguments = [];
+        foreach ($this->schema->entities as $entity) {
+            foreach ($entity->actions as $action) {
+                $arguments[$entity->name . '.' . $action->name] = array_keys($action->arguments);
+            }
+        }
+        ksort($arguments);
+        $lines = [];
+        foreach ($arguments as $key => $names) {
+            $lines[] = sprintf('    %s => %s,', var_export($key, true), $this->export($names));
+        }
+        $method = $type->addMethod('actionArguments')->setReturnType('array')->setBody(sprintf(
+            "return match (\$entity . '.' . \$action) {\n%s\n    default => [],\n};",
+            implode("\n", $lines),
+        ))->addComment('@return list<string>');
+        $method->addParameter('entity')->setType('string');
+        $method->addParameter('action')->setType('string');
+    }
+
+    private function addDecodeActionArguments(\Nette\PhpGenerator\ClassType $type, \Nette\PhpGenerator\PhpNamespace $namespace): void
+    {
+        $arms = [];
+        foreach ($this->schema->entities as $entity) {
+            $input = $this->names->input($entity);
+            $namespace->addUse($input);
+
+            $method = $type->addMethod('decode' . $this->emitter->shortName($input) . 'ActionArguments')
+                ->setPrivate()
+                ->setReturnType('array')
+                ->setBody(sprintf(
+                    "\$input = \$this->container->get(%s::class);\n\nassert(\$input instanceof %s);\n\nreturn \$input->decodeAction(\$action, \$args);",
+                    $this->emitter->shortName($input),
+                    $this->emitter->shortName($input),
+                ))
+                ->addComment('@param array<string, mixed> $args')
+                ->addComment('@return array<string, mixed>');
+            $method->addParameter('action')->setType('string');
+            $method->addParameter('args')->setType('array');
+
+            $arms[] = sprintf(
+                '    %s => $this->%s($action, $args),',
+                var_export($entity->name, true),
+                $method->getName(),
+            );
+        }
+        $method = $type->addMethod('decodeActionArguments')
+            ->setReturnType('array')
+            ->setBody(sprintf(
+                "return match (\$entity) {\n%s\n    default => throw new RuntimeException(sprintf('No entity named \"%%s\".', \$entity)),\n};",
+                implode("\n", $arms),
+            ))
+            ->addComment('@param array<string, mixed> $args')
+            ->addComment('@return array<string, mixed>');
+        $method->addParameter('entity')->setType('string');
+        $method->addParameter('action')->setType('string');
+        $method->addParameter('args')->setType('array');
+    }
+
+    private function policyResolver(\Nette\PhpGenerator\ClassType $type, string $method, string $returns, bool $write, \Nette\PhpGenerator\PhpNamespace $namespace): void
+    {
+        $arms = [];
+        foreach ($this->schema->entities as $entity) {
+            $policies = $write ? $entity->writePolicies : $entity->readPolicies;
+            if ([] === $policies) {
+                $arms[] = sprintf('    %s => new NoPolicies(),', var_export($entity->name, true));
+            } else {
+                $target = $write ? $this->names->writePolicies($entity) : $this->names->readPolicies($entity);
+                $namespace->addUse($target);
+                $resolver = $type->addMethod($method . $this->emitter->shortName($target))
+                    ->setPrivate()
+                    ->setReturnType($returns)
+                    ->setBody(sprintf(
+                        "\$policies = \$this->container->get(%s::class);\n\nassert(\$policies instanceof %s);\n\nreturn \$policies;",
+                        $this->emitter->shortName($target),
+                        $this->emitter->shortName($target),
+                    ));
+
+                $arms[] = sprintf(
+                    '    %s => $this->%s(),',
+                    var_export($entity->name, true),
+                    $resolver->getName(),
+                );
+            }
+        }
+        $resolved = $type->addMethod($method)->setReturnType($returns)->setBody(sprintf(
+            "return match (\$entity) {\n%s\n    default => throw new RuntimeException(sprintf('No entity named \"%%s\".', \$entity)),\n};",
+            implode("\n", $arms),
+        ));
+        $resolved->addParameter('entity')->setType('string');
+    }
+
     private function addApply(\Nette\PhpGenerator\ClassType $type, \Nette\PhpGenerator\PhpNamespace $namespace): void
     {
         $arms = [];
@@ -481,6 +579,25 @@ final readonly class CatalogueGenerator
                     $contracts[] = $this->names->fieldVerifier($entity, $field);
                 }
             }
+            foreach ($entity->readPolicies as $policy) {
+                if (!$policy->declaredIn()->isPattern()) {
+                    $contracts[] = $this->names->readPolicyHandler($entity, $policy->name);
+                }
+            }
+            foreach ($entity->writePolicies as $policy) {
+                if (!$policy->declaredIn()->isPattern()) {
+                    $contracts[] = $this->names->writePolicyHandler($entity, $policy->name);
+                }
+            }
+        }
+
+        foreach ($this->schema->patterns as $pattern) {
+            foreach ($pattern->readPolicies as $policy) {
+                $contracts[] = $this->names->patternReadPolicyHandler($pattern->name, $policy->name);
+            }
+            foreach ($pattern->writePolicies as $policy) {
+                $contracts[] = $this->names->patternWritePolicyHandler($pattern->name, $policy->name);
+            }
         }
 
         foreach ($this->schema->types as $declared) {
@@ -490,6 +607,7 @@ final readonly class CatalogueGenerator
             }
         }
 
+        $contracts = array_values(array_unique($contracts));
         sort($contracts);
 
         $type->addMethod('contracts')
