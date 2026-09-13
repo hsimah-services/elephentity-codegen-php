@@ -463,12 +463,34 @@ final readonly class CatalogueGenerator
         foreach ($this->schema->entities as $entity) {
             $input = $this->names->input($entity);
             $namespace->addUse($input);
-            $arms[] = sprintf('    %s => %s::class,', var_export($entity->name, true), $this->emitter->shortName($input));
+
+            $method = $type->addMethod('decode' . $this->emitter->shortName($input) . 'ActionArguments')
+                ->setPrivate()
+                ->setReturnType('array')
+                ->setBody(sprintf(
+                    "\$input = \$this->container->get(%s::class);\n\nassert(\$input instanceof %s);\n\nreturn \$input->decodeAction(\$action, \$args);",
+                    $this->emitter->shortName($input),
+                    $this->emitter->shortName($input),
+                ))
+                ->addComment('@param array<string, mixed> $args')
+                ->addComment('@return array<string, mixed>');
+            $method->addParameter('action')->setType('string');
+            $method->addParameter('args')->setType('array');
+
+            $arms[] = sprintf(
+                '    %s => $this->%s($action, $args),',
+                var_export($entity->name, true),
+                $method->getName(),
+            );
         }
-        $method = $type->addMethod('decodeActionArguments')->setReturnType('array')->setBody(sprintf(
-            "\$input = match (\$entity) {\n%s\n    default => throw new RuntimeException(sprintf('No entity named \"%%s\".', \$entity)),\n};\n\nreturn \$this->container->get(\$input)->decodeAction(\$action, \$args);",
-            implode("\n", $arms),
-        ));
+        $method = $type->addMethod('decodeActionArguments')
+            ->setReturnType('array')
+            ->setBody(sprintf(
+                "return match (\$entity) {\n%s\n    default => throw new RuntimeException(sprintf('No entity named \"%%s\".', \$entity)),\n};",
+                implode("\n", $arms),
+            ))
+            ->addComment('@param array<string, mixed> $args')
+            ->addComment('@return array<string, mixed>');
         $method->addParameter('entity')->setType('string');
         $method->addParameter('action')->setType('string');
         $method->addParameter('args')->setType('array');
@@ -484,7 +506,20 @@ final readonly class CatalogueGenerator
             } else {
                 $target = $write ? $this->names->writePolicies($entity) : $this->names->readPolicies($entity);
                 $namespace->addUse($target);
-                $arms[] = sprintf('    %s => $this->container->get(%s::class),', var_export($entity->name, true), $this->emitter->shortName($target));
+                $resolver = $type->addMethod($method . $this->emitter->shortName($target))
+                    ->setPrivate()
+                    ->setReturnType($returns)
+                    ->setBody(sprintf(
+                        "\$policies = \$this->container->get(%s::class);\n\nassert(\$policies instanceof %s);\n\nreturn \$policies;",
+                        $this->emitter->shortName($target),
+                        $this->emitter->shortName($target),
+                    ));
+
+                $arms[] = sprintf(
+                    '    %s => $this->%s(),',
+                    var_export($entity->name, true),
+                    $resolver->getName(),
+                );
             }
         }
         $resolved = $type->addMethod($method)->setReturnType($returns)->setBody(sprintf(
