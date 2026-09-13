@@ -49,6 +49,18 @@ final readonly class Schema
     }
 
     /**
+     * Whether an entity has anything an EdgeLoader would ever be asked for: an edge of
+     * its own, or another entity's edge pointing back at it.
+     *
+     * The one place that decides it, so an entity with neither does not carry a loader
+     * dependency nothing would ever call.
+     */
+    public function hasEdges(EntityDefinition $entity): bool
+    {
+        return [] !== $entity->edges || [] !== $this->inversesOf($entity->name);
+    }
+
+    /**
      * The reverse accessors an entity gets from edges declared elsewhere.
      *
      * Answering it means reading every *other* entity's edges, which is a build-time
