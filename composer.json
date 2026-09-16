@@ -2,7 +2,7 @@
     "name": "elephentity/codegen-php",
     "description": "The PHP builder for Elephentity: compiles the IR into locked PHP. Build-time only.",
     "type": "library",
-    "license": "MIT",
+    "license": "Apache-2.0",
     "require": {
         "php": ">=8.3",
         "nette/php-generator": "^4.1",
