@@ -13,10 +13,9 @@ use stdClass;
 /**
  * The acceptance suite: a committed request in, a committed response out, byte for byte.
  *
- * This is the specification of what this program does, in the only form another
- * implementation can consume. When the generator is rewritten in Rust, these files do
- * not change and the new binary has to reproduce them exactly — which is a far stronger
- * statement than "the tests still pass", because the tests would be rewritten too.
+ * These snapshots pin the native Rust printer's output. The original PHP snapshots
+ * remain in response.reference.json; tools/compare-rust.php compares their resolved
+ * PHP syntax trees so formatting changes do not require a compatibility printer.
  *
  * It runs the real binary rather than `PhpTarget`, so what is pinned includes the
  * entrypoint: the version gate, the JSON encoding, the exit code and the promise that
@@ -66,7 +65,7 @@ final class GoldenTest extends TestCase
 
         self::assertSame(
             $result['stdout'],
-            (string) json_encode(json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR), JSON_UNESCAPED_SLASHES),
+            (string) json_encode(json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         );
     }
 
@@ -179,7 +178,7 @@ final class GoldenTest extends TestCase
     private function invoke(string $input): array
     {
         $process = proc_open(
-            [PHP_BINARY, dirname(__DIR__) . '/bin/eleph-gen-php'],
+            [getenv('ELEPH_BUILDER_BINARY') ?: dirname(__DIR__) . '/bin/eleph-gen-php'],
             [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
             $pipes,
         );
