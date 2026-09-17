@@ -2,13 +2,18 @@
 
 The PHP builder for [Elephentity](https://github.com/hsimah-services/elephentity).
 
+Implemented in Rust. Build a checkout with `cargo build --release --locked`, or install
+the executable on PATH with `cargo install --path . --locked`. The `bin/eleph-gen-php`
+checkout launcher uses `target/release/eleph-gen-php` (or a debug build during development).
+It never falls back to PHP. Installed Cargo binaries need neither PHP nor Cargo to run.
+
 It reads one JSON request on stdin — the compiled spec, plus the target's configuration
 — and writes one JSON response on stdout: a path and a body per file. It never touches
 the filesystem. Signing and writing happen in
 [elephentity-codegen](https://github.com/hsimah-services/elephentity-codegen), after this exits.
 
 ```bash
-echo '{"elephentity":1,"irVersion":"1.0","target":"php","config":{},
+echo '{"elephentity":1,"irVersion":"1.1","target":"php","config":{},
        "outputDirectory":"out","schema":{}}' | ./bin/eleph-gen-php
 ```
 
@@ -17,10 +22,16 @@ That fails on the empty schema, which is the point: it should be obvious how.
 ## Installing it
 
 ```bash
+# From this repository:
+cargo install --path . --locked
+
+# Or, when using the Composer distribution:
 composer require --dev elephentity/codegen-php
+cargo build --release --locked --manifest-path vendor/elephentity/codegen-php/Cargo.toml
 ```
 
-Then name it in `eleph.json`:
+Use `"builder": "eleph-gen-php"` for a Cargo installation, or the Composer
+launcher as shown below. Then name it in `eleph.json`:
 
 ```json
 {
@@ -40,30 +51,42 @@ in the pipeline knows what they mean.
 
 ## It depends on nothing of Elephentity's
 
-Not the compiler, not the runtime, not the orchestrator. The IR value objects in `src/Ir`
-are a copy, and the runtime classes generated code refers to are strings in
-`src/Runtime.php` rather than imports. That is deliberate: a builder that had to
+Not the compiler, not the runtime, not the orchestrator. The IR types in `rust/ir.rs`
+are an independent copy, and the runtime classes generated code refers to are strings in
+`rust/runtime.rs` rather than imports. That is deliberate: a builder that had to
 `composer require` the framework would be a builder no other language could write. The
 version gate is what holds the copy in step — a mismatch is a refusal, never a silent
 misread.
 
 ## Working on it
 
-There is no local PHP; everything runs in a container:
-
 ```bash
-./tools/php composer ci          # style, static analysis, tests
-./tools/php vendor/bin/phpunit --filter GoldenTest
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test --locked
+./tools/php composer ci
 ```
 
-PHPStan runs at **level max** with no baseline exclusions.
+Rust sources live in `rust/`. Each builder owns its IR types and version gate; there
+is no runtime dependency on the compiler or another builder. PHP in `src/` and the
+`bin/eleph-gen-php-reference` executable is retained as a migration oracle for the
+existing tests. Production entrypoints run Rust only. PHPStan still checks the reference
+and acceptance tests at level max.
+
+PHP declarations use [`php_codegen`](https://docs.rs/php_codegen/0.4.0/php_codegen/).
+The crate owns formatting; there is no compatibility printer. File names, runtime
+interfaces, method behavior, and class-map structure remain compatible.
+
+`php tools/compare-rust.php` compares the frozen PHP responses and additional scenarios
+against the Rust binary using parsed, name-resolved PHP ASTs. This permits formatting,
+quote style, and trailing-comma differences while checking executable structure.
 
 ## The golden fixtures
 
-`tests/fixtures/golden/*/` holds a committed request and the exact response it produces.
-They are the specification of this program in the only form another implementation can
-consume: when this is rewritten in Rust, the fixtures do not change and the new binary
-has to reproduce them byte for byte.
+`tests/fixtures/golden/*/response.json` pins the Rust output. The original PHP responses
+are preserved as `response.reference.json`, unchanged, for the independent AST checks.
+Only the formatting snapshots changed in this migration. The WordPress and WPGraphQL
+builders retain their original output bytes.
 
-When a deliberate change moves them, regenerate and read the diff — it is the clearest
-description available of what the change did to every project's generated tree.
+Regenerate generated PHP once after upgrading, and commit the changed signed files.
+The signer itself is unchanged; formatting changes naturally produce new digests.
