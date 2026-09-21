@@ -106,7 +106,7 @@ final class GoldenTest extends TestCase
         // language generator working normally and a build that should refuse.
         $result = $this->invoke((string) json_encode([
             'elephentity' => 1,
-            'irVersion' => '1.1',
+            'irVersion' => '1.2',
             'request' => 'describe',
             'target' => 'php',
         ]));
@@ -114,7 +114,7 @@ final class GoldenTest extends TestCase
         self::assertSame(0, $result['exit'], $result['stderr']);
         self::assertSame('', $result['stderr']);
         self::assertSame(
-            ['elephentity' => 1, 'irVersion' => '1.1', 'provides' => []],
+            ['elephentity' => 1, 'irVersion' => '1.2', 'provides' => []],
             json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR),
         );
     }

@@ -40,7 +40,7 @@ final readonly class CatalogueGenerator
         $namespace = $this->emitter->open($class);
 
         foreach ([
-            Runtime::ENTITY_CATALOGUE, Runtime::ENTITY_TRIGGERS, Runtime::ENTITY_VERIFIERS,
+            Runtime::ENTITY_CATALOGUE, Runtime::ENTITY_SIDE_EFFECTS, Runtime::ENTITY_VERIFIERS,
             Runtime::ENTITY_READ_POLICIES, Runtime::ENTITY_WRITE_POLICIES, Runtime::NO_POLICIES,
             Runtime::HYDRATOR, Runtime::MUTATION_BUFFER, Runtime::DELETION_RULE,
             ContainerInterface::class, RuntimeException::class,
@@ -69,7 +69,7 @@ final readonly class CatalogueGenerator
 
         $this->resolver($type, 'hydrator', Runtime::HYDRATOR, fn (EntityDefinition $e): string => $this->names->hydrator($e), $namespace);
         $this->resolver($type, 'verifiers', Runtime::ENTITY_VERIFIERS, fn (EntityDefinition $e): string => $this->names->verifiers($e), $namespace);
-        $this->resolver($type, 'triggers', Runtime::ENTITY_TRIGGERS, fn (EntityDefinition $e): string => $this->names->triggers($e), $namespace);
+        $this->resolver($type, 'sideEffects', Runtime::ENTITY_SIDE_EFFECTS, fn (EntityDefinition $e): string => $this->names->sideEffects($e), $namespace);
         $this->policyResolver($type, 'readPolicies', Runtime::ENTITY_READ_POLICIES, false, $namespace);
         $this->policyResolver($type, 'writePolicies', Runtime::ENTITY_WRITE_POLICIES, true, $namespace);
 
@@ -570,8 +570,8 @@ final readonly class CatalogueGenerator
                 $contracts[] = $this->names->actionHandler($entity, $action->name);
             }
 
-            foreach ($entity->triggers as $trigger) {
-                $contracts[] = $this->names->triggerHandler($entity, $trigger->name);
+            foreach ($entity->sideEffects as $sideEffect) {
+                $contracts[] = $this->names->sideEffectHandler($entity, $sideEffect->name);
             }
 
             foreach ($entity->fields as $field) {

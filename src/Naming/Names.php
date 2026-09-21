@@ -47,6 +47,11 @@ final readonly class Names
         return $this->member($entity, 'Finder');
     }
 
+    public function preCommitContext(EntityDefinition $entity): string
+    {
+        return $this->member($entity, 'PreCommitContext');
+    }
+
     public function mutationContext(EntityDefinition $entity): string
     {
         return $this->member($entity, 'MutationContext');
@@ -77,9 +82,9 @@ final readonly class Names
         return $this->member($entity, 'Verifiers');
     }
 
-    public function triggers(EntityDefinition $entity): string
+    public function sideEffects(EntityDefinition $entity): string
     {
-        return $this->member($entity, 'Triggers');
+        return $this->member($entity, 'SideEffects');
     }
 
     public function hydrator(EntityDefinition $entity): string
@@ -130,9 +135,9 @@ final readonly class Names
         return $this->contract($entity, ucfirst($action) . 'Action');
     }
 
-    public function triggerHandler(EntityDefinition $entity, string $trigger): string
+    public function sideEffectHandler(EntityDefinition $entity, string $sideEffect): string
     {
-        return $this->contract($entity, ucfirst($trigger) . 'Trigger');
+        return $this->contract($entity, ucfirst($sideEffect) . 'SideEffect');
     }
 
     public function readPolicyHandler(EntityDefinition $entity, string $policy): string

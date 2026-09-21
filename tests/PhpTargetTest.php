@@ -30,8 +30,9 @@ final class PhpTargetTest extends TestCase
             'Author/AuthorInput.php',
             'Author/AuthorMutationContext.php',
             'Author/AuthorMutator.php',
+            'Author/AuthorPreCommitContext.php',
             'Author/AuthorReadPolicies.php',
-            'Author/AuthorTriggers.php',
+            'Author/AuthorSideEffects.php',
             'Author/AuthorVerifiers.php',
             'Author/AuthorWriteContext.php',
             'Author/AuthorWritePolicies.php',
@@ -42,8 +43,9 @@ final class PhpTargetTest extends TestCase
             'Comment/CommentInput.php',
             'Comment/CommentMutationContext.php',
             'Comment/CommentMutator.php',
+            'Comment/CommentPreCommitContext.php',
             'Comment/CommentReadPolicies.php',
-            'Comment/CommentTriggers.php',
+            'Comment/CommentSideEffects.php',
             'Comment/CommentVerifiers.php',
             'Comment/CommentWriteContext.php',
             'Comment/CommentWritePolicies.php',
@@ -52,12 +54,12 @@ final class PhpTargetTest extends TestCase
             'Pattern/Auditable/Auditable.php',
             'Pattern/Auditable/AuditableMutatorTrait.php',
             'Pattern/Auditable/Contract/AuditableOwnerReadPolicy.php',
-            'Post/Contract/PostAuditTrigger.php',
+            'Post/Contract/PostAuditSideEffect.php',
             'Post/Contract/PostNoBackwardsWritePolicy.php',
             'Post/Contract/PostPriceVerifier.php',
             'Post/Contract/PostPublishAction.php',
             'Post/Contract/PostPublishedQuery.php',
-            'Post/Contract/PostReindexTrigger.php',
+            'Post/Contract/PostReindexSideEffect.php',
             'Post/Contract/PostReporterReadPolicy.php',
             'Post/Post.php',
             'Post/PostDeleter.php',
@@ -66,10 +68,11 @@ final class PhpTargetTest extends TestCase
             'Post/PostInput.php',
             'Post/PostMutationContext.php',
             'Post/PostMutator.php',
+            'Post/PostPreCommitContext.php',
             'Post/PostPublishArguments.php',
             'Post/PostPublishContext.php',
             'Post/PostReadPolicies.php',
-            'Post/PostTriggers.php',
+            'Post/PostSideEffects.php',
             'Post/PostVerifiers.php',
             'Post/PostWriteContext.php',
             'Post/PostWritePolicies.php',
@@ -79,8 +82,9 @@ final class PhpTargetTest extends TestCase
             'Tag/TagInput.php',
             'Tag/TagMutationContext.php',
             'Tag/TagMutator.php',
+            'Tag/TagPreCommitContext.php',
             'Tag/TagReadPolicies.php',
-            'Tag/TagTriggers.php',
+            'Tag/TagSideEffects.php',
             'Tag/TagVerifiers.php',
             'Tag/TagWriteContext.php',
             'Tag/TagWritePolicies.php',
@@ -285,27 +289,25 @@ final class PhpTargetTest extends TestCase
         self::assertStringContainsString('return Verification::ok();', $bridge);
     }
 
-    public function testTriggersDispatchInDeclarationOrderGuardedByPhaseAndEvent(): void
+    public function testSideEffectsDispatchInDeclarationOrderGuardedByPhaseAndEvent(): void
     {
-        $bridge = $this->file('Post/PostTriggers.php');
+        $bridge = $this->file('Post/PostSideEffects.php');
 
         self::assertStringContainsString(
-            'if (TriggerPhase::PostCommit === $phase && in_array($event, [TriggerEvent::Create, TriggerEvent::Update], true)) {',
+            'if (SideEffectPhase::PostCommit === $phase && in_array($event, [SideEffectEvent::Create, SideEffectEvent::Update], true)) {',
             $bridge,
         );
 
         // audit is declared before reindex in the pattern and the entity respectively.
         self::assertLessThan(
-            strpos($bridge, 'reindexTrigger->handle'),
-            (int) strpos($bridge, 'auditTrigger->handle'),
+            strpos($bridge, 'reindexSideEffect->handle'),
+            (int) strpos($bridge, 'auditSideEffect->handle'),
         );
     }
 
     public function testWhatGeneratedCodeBuildsIsSealedBehindANamedConstructor(): void
     {
-        // One entry point rather than two: `new Post(...)` beside `Post::of(...)` says
-        // nothing about which is intended, and it matches the runtime's own style.
-        foreach (['Post/Post.php', 'Post/PostMutationContext.php', 'Post/PostPublishContext.php'] as $path) {
+        foreach (['Post/Post.php', 'Post/PostMutationContext.php', 'Post/PostPreCommitContext.php', 'Post/PostPublishContext.php'] as $path) {
             $source = $this->file($path);
 
             self::assertStringContainsString('private function __construct(', $source, $path);
@@ -323,7 +325,7 @@ final class PhpTargetTest extends TestCase
             'Post/PostFinder.php',
             'Post/PostHydrator.php',
             'Post/PostVerifiers.php',
-            'Post/PostTriggers.php',
+            'Post/PostSideEffects.php',
         ] as $path) {
             $source = $this->file($path);
 
@@ -385,13 +387,13 @@ final class PhpTargetTest extends TestCase
         );
     }
 
-    public function testWiringThreadsATriggersVerifiersAndFinderContractsInDeclarationOrder(): void
+    public function testWiringThreadsASideEffectsVerifiersAndFinderContractsInDeclarationOrder(): void
     {
         $wiring = $this->file('Wiring.php');
 
         self::assertStringContainsString(
-            'PostTriggers::class => static fn (ContainerInterface $c): object => '
-                . 'new PostTriggers(self::resolve($c, PostAuditTrigger::class), self::resolve($c, PostReindexTrigger::class)),',
+            'PostSideEffects::class => static fn (ContainerInterface $c): object => '
+                . 'new PostSideEffects(self::resolve($c, PostAuditSideEffect::class), self::resolve($c, PostReindexSideEffect::class)),',
             $wiring,
         );
         self::assertStringContainsString(
@@ -424,7 +426,7 @@ final class PhpTargetTest extends TestCase
         $wiring = $this->file('Wiring.php');
 
         self::assertStringContainsString(
-            'TagTriggers::class => static fn (ContainerInterface $c): object => new TagTriggers(),',
+            'TagSideEffects::class => static fn (ContainerInterface $c): object => new TagSideEffects(),',
             $wiring,
         );
         self::assertStringContainsString(
@@ -486,7 +488,7 @@ final class PhpTargetTest extends TestCase
 
         self::assertStringContainsString('PostPriceVerifier', $catalogue);
         self::assertStringContainsString('PostPublishAction', $catalogue);
-        self::assertStringContainsString('PostAuditTrigger', $catalogue);
+        self::assertStringContainsString('PostAuditSideEffect', $catalogue);
         self::assertStringContainsString('MoneyReadProcessor', $catalogue);
         self::assertStringContainsString('MoneyWriteProcessor', $catalogue);
     }

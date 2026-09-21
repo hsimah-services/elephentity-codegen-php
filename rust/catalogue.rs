@@ -27,7 +27,7 @@ impl Gen<'_> {
         out.readonly();
         out.implements(ENTITY_CATALOGUE);
         for t in [
-            ENTITY_TRIGGERS,
+            ENTITY_SIDE_EFFECTS,
             ENTITY_VERIFIERS,
             ENTITY_READ_POLICIES,
             ENTITY_WRITE_POLICIES,
@@ -59,7 +59,7 @@ impl Gen<'_> {
         for (n, suffix, ret) in [
             ("hydrator", "Hydrator", "Hydrator"),
             ("verifiers", "Verifiers", "EntityVerifiers"),
-            ("triggers", "Triggers", "EntityTriggers"),
+            ("sideEffects", "SideEffects", "EntitySideEffects"),
         ] {
             let mut arms = vec![];
             for e in &entities {
@@ -388,7 +388,7 @@ impl Gen<'_> {
             for suffix in [
                 "Hydrator",
                 "Input",
-                "Triggers",
+                "SideEffects",
                 "Verifiers",
                 "ReadPolicies",
                 "WritePolicies",
@@ -405,10 +405,10 @@ impl Gen<'_> {
                             deps.push(format!("{}\\Type\\{n}ReadProcessor", self.root));
                         }
                     }
-                    "Triggers" | "Finder" => {
+                    "SideEffects" | "Finder" => {
                         for t in vals(
-                            &e[if suffix == "Triggers" {
-                                "triggers"
+                            &e[if suffix == "SideEffects" {
+                                "sideEffects"
                             } else {
                                 "queries"
                             }],
@@ -418,8 +418,8 @@ impl Gen<'_> {
                                 &format!(
                                     "{}{}",
                                     cap(s(&t["name"])),
-                                    if suffix == "Triggers" {
-                                        "Trigger"
+                                    if suffix == "SideEffects" {
+                                        "SideEffect"
                                     } else {
                                         "Query"
                                     }

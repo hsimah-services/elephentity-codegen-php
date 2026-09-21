@@ -42,9 +42,9 @@ impl Gen<'_> {
             out.add(m);
             files.push(out.file(&self.root));
         }
-        for t in vals(&e["triggers"]) {
+        for t in vals(&e["sideEffects"]) {
             let n = s(&t["name"]);
-            let mut out = Source::new(self.contract(e, &format!("{}Trigger", cap(n))));
+            let mut out = Source::new(self.contract(e, &format!("{}SideEffect", cap(n))));
             out.kind = "interface";
             let description = t["description"]
                 .as_str()
@@ -61,10 +61,17 @@ impl Gen<'_> {
             let phase = if t["phase"] == "postCommit" {
                 "postCommit: the transaction is closed, so writes here are a new unit of\nwork and are not atomic with the commit that caused them. A throw is logged."
             } else {
-                "preCommit: inside the transaction and after the flush, so ids exist. Throw\nto abort the whole commit. Mutation is not permitted in this phase."
+                "preCommit: update pending fields and relationships before verification and storage.\nThrow to cancel the mutation. New entities still have pending IDs."
             };
             out.comment(&format!("{description}\n\n{phase}"));
-            let ty = out.import(&self.name(e, "MutationContext"));
+            let ty = out.import(&self.name(
+                e,
+                if t["phase"] == "postCommit" {
+                    "MutationContext"
+                } else {
+                    "PreCommitContext"
+                },
+            ));
             out.add(declaration("handle", "void").parameter(param("context", &ty, false)));
             files.push(out.file(&self.root));
         }

@@ -166,6 +166,8 @@ final readonly class ContextGenerator
         $type = $namespace->addClass($this->emitter->shortName($class));
         $type->setFinal()->setReadOnly()->addImplement(Runtime::WRITE_CONTEXT);
         $type->addMethod('__construct')->addPromotedParameter('context')->setType(Runtime::WRITE_CONTEXT)->setPrivate();
+        $namespace->addUse(Runtime::ACTION_CALL);
+        $type->addMethod('actions')->setReturnType('array')->setBody('return $this->context->actions();')->addComment('@return list<ActionCall>');
         $factory = $type->addMethod('of')->setStatic()->setReturnType('self');
         $factory->addParameter('context')->setType(Runtime::WRITE_CONTEXT);
         $factory->setBody('return new self($context);');
@@ -193,34 +195,50 @@ final readonly class ContextGenerator
             $methodObject->setBody(sprintf("return '%s' === \$this->context->action() ? %s::of(\$this->context->arguments()) : null;", $action->name, $this->emitter->shortName($arguments)));
         }
 
+
         return $this->emitter->file($class, $namespace);
     }
 
     /**
-     * An entity's mutation context, typed.
-     *
-     * Shared type processors take the generic MutationContext and its stringly-typed
-     * accessors, because Money is used by many entities and cannot accept a per-entity
-     * class. Field verifiers and triggers get this instead, where every accessor is
-     * exact.
+     * Generates entity-specific typed contexts for field verifiers and sideEffects.
      */
-    public function mutationContext(EntityDefinition $entity): GeneratedFile
+    public function mutationContext(EntityDefinition $entity, bool $mutable = false): GeneratedFile
     {
-        $class = $this->names->mutationContext($entity);
+        $class = $mutable ? $this->names->preCommitContext($entity) : $this->names->mutationContext($entity);
+        $runtime = $mutable ? Runtime::MUTABLE_MUTATION_CONTEXT : Runtime::MUTATION_CONTEXT;
         $namespace = $this->emitter->open($class);
-        $namespace->addUse(Runtime::MUTATION_CONTEXT);
+        $namespace->addUse($runtime);
 
         $type = $namespace->addClass($this->emitter->shortName($class));
         $type->setFinal();
         $type->setReadOnly();
-        $type->addImplement(Runtime::MUTATION_CONTEXT);
+        $type->addImplement($runtime);
         $type->addComment(sprintf('A pending %s mutation, with exact types.', $entity->name));
         $namespace->addUse(Runtime::IDENTIFIER);
 
         $constructor = $type->addMethod('__construct');
         $constructor->addPromotedParameter('context')
-            ->setType(Runtime::MUTATION_CONTEXT)
+            ->setType($runtime)
             ->setPrivate();
+
+        $namespace->addUse(Runtime::ACTION_CALL);
+        $type->addMethod('actions')->setReturnType('array')->setBody('return $this->context->actions();')->addComment('@return list<ActionCall>');
+        $type->addMethod('originalEntity')->setReturnType('object')->setReturnNullable(true)->setBody('return $this->context->originalEntity();');
+        if ($mutable) {
+            $namespace->addUse(Runtime::EDGE_MUTATION);
+            $type->addMethod('target')->setReturnType(Runtime::IDENTIFIER)->setBody('return $this->context->target();');
+            $set = $type->addMethod('set')->setReturnType('void')->setBody('$this->context->set($field, $value);');
+            $set->addParameter('field')->setType('string');
+            $set->addParameter('value')->setType('mixed');
+            $type->addMethod('edge')->setReturnType(Runtime::EDGE_MUTATION)->setBody('return $this->context->edge($edge);')->addParameter('edge')->setType('string');
+            foreach ($entity->fields as $field) {
+                $fieldType = $this->types->forField($entity, $field);
+                $type->addMethod('set' . ucfirst($field->name))->setReturnType('void')->setBody(sprintf('$this->context->set(%s, $value);', var_export($field->name, true)))->addParameter('value')->setType($fieldType)->setNullable($field->nullable);
+            }
+            foreach ($entity->edges as $edge) {
+                $type->addMethod($edge->name)->setReturnType(Runtime::EDGE_MUTATION)->setBody(sprintf('return $this->context->edge(%s);', var_export($edge->name, true)));
+            }
+        }
 
         $type->addMethod('id')
             ->setReturnType(Runtime::IDENTIFIER)

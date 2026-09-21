@@ -48,7 +48,7 @@ final readonly class ContractGenerator
         return [
             ...$this->queries($entity),
             ...$this->actions($entity),
-            ...$this->triggers($entity),
+            ...$this->sideEffects($entity),
             ...$this->verifiers($entity),
             ...$this->policies($entity),
         ];
@@ -301,30 +301,30 @@ final readonly class ContractGenerator
     /**
      * @return list<GeneratedFile>
      */
-    private function triggers(EntityDefinition $entity): array
+    private function sideEffects(EntityDefinition $entity): array
     {
         $files = [];
 
-        foreach ($entity->triggers as $trigger) {
-            $name = $this->names->triggerHandler($entity, $trigger->name);
+        foreach ($entity->sideEffects as $sideEffect) {
+            $name = $this->names->sideEffectHandler($entity, $sideEffect->name);
             $namespace = $this->emitter->open($name);
 
-            $context = $this->names->mutationContext($entity);
+            $context = 'preCommit' === $sideEffect->phase->value ? $this->names->preCommitContext($entity) : $this->names->mutationContext($entity);
             $namespace->addUse($context);
 
             $interface = $namespace->addInterface($this->emitter->shortName($name));
-            $interface->addComment($trigger->description ?? sprintf(
+            $interface->addComment($sideEffect->description ?? sprintf(
                 'Runs %s on %s.',
-                $trigger->phase->value,
-                implode(', ', array_map(static fn ($event) => $event->value, $trigger->events)),
+                $sideEffect->phase->value,
+                implode(', ', array_map(static fn ($event) => $event->value, $sideEffect->events)),
             ));
             $interface->addComment('');
-            $interface->addComment($trigger->phase->allowsMutation()
+            $interface->addComment(('postCommit' === $sideEffect->phase->value)
                 ? 'postCommit: the transaction is closed, so writes here are a new unit of'
-                : 'preCommit: inside the transaction and after the flush, so ids exist. Throw');
-            $interface->addComment($trigger->phase->allowsMutation()
+                : 'preCommit: update pending fields and relationships before verification and storage.');
+            $interface->addComment(('postCommit' === $sideEffect->phase->value)
                 ? 'work and are not atomic with the commit that caused them. A throw is logged.'
-                : 'to abort the whole commit. Mutation is not permitted in this phase.');
+                : 'Throw to cancel the mutation. New entities still have pending IDs.');
 
             $method = $interface->addMethod('handle')->setPublic()->setReturnType('void');
             $method->addParameter('context')->setType($context);
