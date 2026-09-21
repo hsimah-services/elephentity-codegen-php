@@ -34,20 +34,23 @@ final class Runtime
     public const ENTITY_WRITE_POLICIES = 'Eleph\Runtime\Policy\EntityWritePolicies';
     public const ENTITY_ID = 'Eleph\Runtime\Identity\EntityId';
     public const ENTITY_QUERY = 'Eleph\Runtime\Query\EntityQuery';
-    public const ENTITY_TRIGGERS = 'Eleph\Runtime\Mutation\EntityTriggers';
+    public const ENTITY_SIDE_EFFECTS = 'Eleph\Runtime\Mutation\EntitySideEffects';
     public const ENTITY_VERIFIERS = 'Eleph\Runtime\Verification\EntityVerifiers';
     public const HYDRATOR = 'Eleph\Runtime\Query\Hydrator';
     public const IDENTIFIER = 'Eleph\Runtime\Identity\Identifier';
     public const MANAGED = 'Eleph\Runtime\Mutation\Managed';
     public const MUTATION_BUFFER = 'Eleph\Runtime\Mutation\MutationBuffer';
+    public const MUTABLE_MUTATION_CONTEXT = 'Eleph\Runtime\Mutation\MutableMutationContext';
+    public const ACTION_CALL = 'Eleph\Runtime\Mutation\ActionCall';
+
     public const MUTATION_CONTEXT = 'Eleph\Runtime\Mutation\MutationContext';
     public const NO_POLICIES = 'Eleph\Runtime\Policy\NoPolicies';
     public const POLICY_DECISION = 'Eleph\Runtime\Policy\PolicyDecision';
     public const POLICY_OUTCOME = 'Eleph\Runtime\Policy\PolicyOutcome';
     public const READ_PROCESSOR = 'Eleph\Runtime\Type\ReadProcessor';
     public const RECORD = 'Eleph\Runtime\Storage\Record';
-    public const TRIGGER_EVENT = 'Eleph\Runtime\Trigger\TriggerEvent';
-    public const TRIGGER_PHASE = 'Eleph\Runtime\Trigger\TriggerPhase';
+    public const SIDE_EFFECT_EVENT = 'Eleph\Runtime\SideEffect\SideEffectEvent';
+    public const SIDE_EFFECT_PHASE = 'Eleph\Runtime\SideEffect\SideEffectPhase';
     public const UNIT_OF_WORK = 'Eleph\Runtime\UnitOfWork\UnitOfWork';
     public const VALUE_DECODER = 'Eleph\Runtime\Query\ValueDecoder';
     public const VIEWER = 'Eleph\Runtime\Policy\Viewer';

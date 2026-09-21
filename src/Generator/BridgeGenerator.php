@@ -42,7 +42,7 @@ final readonly class BridgeGenerator
     {
         return [
             $this->verifiers($entity),
-            $this->triggers($entity),
+            $this->sideEffects($entity),
             $this->readPolicies($entity),
             $this->writePolicies($entity),
         ];
@@ -248,14 +248,14 @@ final readonly class BridgeGenerator
         return $this->emitter->file($class, $namespace);
     }
 
-    private function triggers(EntityDefinition $entity): GeneratedFile
+    private function sideEffects(EntityDefinition $entity): GeneratedFile
     {
-        $class = $this->names->triggers($entity);
+        $class = $this->names->sideEffects($entity);
         $namespace = $this->emitter->open($class);
-        $namespace->addUse(Runtime::ENTITY_TRIGGERS);
-        $namespace->addUse(Runtime::MUTATION_CONTEXT);
-        $namespace->addUse(Runtime::TRIGGER_EVENT);
-        $namespace->addUse(Runtime::TRIGGER_PHASE);
+        $namespace->addUse(Runtime::ENTITY_SIDE_EFFECTS);
+        $namespace->addUse(Runtime::MUTABLE_MUTATION_CONTEXT);
+        $namespace->addUse(Runtime::SIDE_EFFECT_EVENT);
+        $namespace->addUse(Runtime::SIDE_EFFECT_PHASE);
 
         $context = $this->names->mutationContext($entity);
         $namespace->addUse($context);
@@ -263,49 +263,52 @@ final readonly class BridgeGenerator
         $type = $namespace->addClass($this->emitter->shortName($class));
         $type->setFinal();
         $type->setReadOnly();
-        $type->addImplement(Runtime::ENTITY_TRIGGERS);
-        $type->addComment(sprintf('Runs %s\'s triggers, in the order the spec declares them.', $entity->name));
+        $type->addImplement(Runtime::ENTITY_SIDE_EFFECTS);
+        $type->addComment(sprintf('Runs %s\'s sideEffects, in the order the spec declares them.', $entity->name));
 
         $constructor = $type->addMethod('__construct');
 
-        foreach ($entity->triggers as $trigger) {
-            $handler = $this->names->triggerHandler($entity, $trigger->name);
+        foreach ($entity->sideEffects as $sideEffect) {
+            $handler = $this->names->sideEffectHandler($entity, $sideEffect->name);
             $namespace->addUse($handler);
 
-            $constructor->addPromotedParameter($trigger->name . 'Trigger')
+            $constructor->addPromotedParameter($sideEffect->name . 'SideEffect')
                 ->setType($handler)
                 ->setPrivate();
         }
 
-        $dispatch = $type->addMethod('dispatch')->setReturnType('void');
-        $dispatch->addParameter('phase')->setType(Runtime::TRIGGER_PHASE);
-        $dispatch->addParameter('event')->setType(Runtime::TRIGGER_EVENT);
-        $dispatch->addParameter('context')->setType(Runtime::MUTATION_CONTEXT);
+        $dispatch = $type->addMethod('handlers')->setReturnType('iterable')->addComment('@return iterable<callable(): void>');
+        $dispatch->addParameter('phase')->setType(Runtime::SIDE_EFFECT_PHASE);
+        $dispatch->addParameter('event')->setType(Runtime::SIDE_EFFECT_EVENT);
+        $dispatch->addParameter('context')->setType(Runtime::MUTABLE_MUTATION_CONTEXT);
 
-        if ([] === $entity->triggers) {
-            $dispatch->setBody('');
+        if ([] === $entity->sideEffects) {
+            $dispatch->setBody("\$handlers = [];\nreturn \$handlers;");
 
             return $this->emitter->file($class, $namespace);
         }
 
-        $lines = [sprintf('$typed = %s::of($context);', $this->emitter->shortName($context)), ''];
+        $lines = ['$handlers = [];'];
 
-        foreach ($entity->triggers as $trigger) {
+        foreach ($entity->sideEffects as $sideEffect) {
             $events = array_map(
-                static fn ($event): string => sprintf('TriggerEvent::%s', ucfirst($event->value)),
-                $trigger->events,
+                static fn ($event): string => sprintf('SideEffectEvent::%s', ucfirst($event->value)),
+                $sideEffect->events,
             );
 
             $lines[] = sprintf(
-                'if (TriggerPhase::%s === $phase && in_array($event, [%s], true)) {',
-                ucfirst($trigger->phase->value),
+                'if (SideEffectPhase::%s === $phase && in_array($event, [%s], true)) {',
+                ucfirst($sideEffect->phase->value),
                 implode(', ', $events),
             );
-            $lines[] = sprintf('    $this->%sTrigger->handle($typed);', $trigger->name);
+            $handlerContext = 'preCommit' === $sideEffect->phase->value ? $this->names->preCommitContext($entity) : $context;
+            $namespace->addUse($handlerContext);
+            $lines[] = sprintf('    $handlers[] = fn () => $this->%sSideEffect->handle(%s::of($context));', $sideEffect->name, $this->emitter->shortName($handlerContext));
             $lines[] = '}';
             $lines[] = '';
         }
 
+        $lines[] = 'return $handlers;';
         $dispatch->setBody(rtrim(implode("\n", $lines)));
         return $this->emitter->file($class, $namespace);
     }

@@ -272,11 +272,13 @@ impl Gen<'_> {
             );
             files.push(out.file(&self.root));
         }
-        for write in [false, true] {
+        for (write, mutable) in [(false, false), (true, false), (false, true)] {
             let mut out = Source::new(self.name(
                 e,
                 if write {
                     "WriteContext"
+                } else if mutable {
+                    "PreCommitContext"
                 } else {
                     "MutationContext"
                 },
@@ -284,12 +286,68 @@ impl Gen<'_> {
             out.readonly();
             let runtime = if write {
                 WRITE_CONTEXT
+            } else if mutable {
+                MUTABLE_MUTATION_CONTEXT
             } else {
                 MUTATION_CONTEXT
             };
             out.implements(runtime);
             let ty = out.import(runtime);
             out.add(method("__construct", "", "").parameter(promoted("context", &ty, false)));
+            out.import(ACTION_CALL);
+            out.add(
+                method("actions", "array", "return $this->context->actions();")
+                    .document(doc("@return list<ActionCall>")),
+            );
+            if !write {
+                out.add(method(
+                    "originalEntity",
+                    "?object",
+                    "return $this->context->originalEntity();",
+                ));
+            }
+            if mutable {
+                out.import(IDENTIFIER);
+                out.import(EDGE_MUTATION);
+                out.add(method(
+                    "target",
+                    "Identifier",
+                    "return $this->context->target();",
+                ));
+                out.add(
+                    method("set", "void", "$this->context->set($field, $value);")
+                        .parameter(param("field", "string", false))
+                        .parameter(param("value", "mixed", false)),
+                );
+                out.add(
+                    method(
+                        "edge",
+                        "EdgeMutation",
+                        "return $this->context->edge($edge);",
+                    )
+                    .parameter(param("edge", "string", false)),
+                );
+                for f in vals(&e["fields"]) {
+                    let n = s(&f["name"]);
+                    let ft = out.import(&self.field_type(e, f)?);
+                    out.add(
+                        method(
+                            &format!("set{}", cap(n)),
+                            "void",
+                            &format!("$this->context->set({}, $value);", quote(n)),
+                        )
+                        .parameter(param("value", &ft, b(&f["nullable"]))),
+                    );
+                }
+                for edge in vals(&e["edges"]) {
+                    let n = s(&edge["name"]);
+                    out.add(method(
+                        n,
+                        "EdgeMutation",
+                        &format!("return $this->context->edge({});", quote(n)),
+                    ));
+                }
+            }
             if write {
                 out.import(WRITE_OPERATION);
                 out.import(MUTATION_CONTEXT);

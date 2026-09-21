@@ -408,49 +408,55 @@ impl Gen<'_> {
             out.add(method(&format!("verify{}",cap(n)),"Verification",&format!("assert({check});\n\nreturn $this->{n}Verifier->verify($value, {context}::of($context));")).private().parameter(param("value","mixed",false)).parameter(param("context","MutationContext",false)));
         }
         files.push(out.file(&self.root));
-        let mut out = Source::new(self.name(e, "Triggers"));
+        let mut out = Source::new(self.name(e, "SideEffects"));
         out.readonly();
-        out.implements(ENTITY_TRIGGERS);
-        for ty in [MUTATION_CONTEXT, TRIGGER_EVENT, TRIGGER_PHASE] {
+        out.implements(ENTITY_SIDE_EFFECTS);
+        for ty in [
+            MUTABLE_MUTATION_CONTEXT,
+            SIDE_EFFECT_EVENT,
+            SIDE_EFFECT_PHASE,
+        ] {
             out.import(ty);
         }
         let context = out.import(&self.name(e, "MutationContext"));
+        let pre_context = out.import(&self.name(e, "PreCommitContext"));
         out.comment(&format!(
-            "Runs {en}'s triggers, in the order the spec declares them."
+            "Runs {en}'s sideEffects, in the order the spec declares them."
         ));
         let mut ctor = method("__construct", "", "");
-        for t in vals(&e["triggers"]) {
+        for t in vals(&e["sideEffects"]) {
             let n = s(&t["name"]);
-            let ty = out.import(&self.contract(e, &format!("{}Trigger", cap(n))));
+            let ty = out.import(&self.contract(e, &format!("{}SideEffect", cap(n))));
             ctor.parameters
-                .push(promoted(&format!("{n}Trigger"), &ty, false));
+                .push(promoted(&format!("{n}SideEffect"), &ty, false));
         }
         out.add(ctor);
-        let mut lines = vec![];
-        if !vals(&e["triggers"]).is_empty() {
-            lines.extend([format!("$typed = {context}::of($context);"), "".into()]);
-            for t in vals(&e["triggers"]) {
+        let mut lines = vec!["$handlers = [];".to_owned()];
+        if !vals(&e["sideEffects"]).is_empty() {
+            for t in vals(&e["sideEffects"]) {
                 let events = list(&t["events"])
                     .iter()
-                    .map(|v| format!("TriggerEvent::{}", cap(s(v))))
+                    .map(|v| format!("SideEffectEvent::{}", cap(s(v))))
                     .collect::<Vec<_>>()
                     .join(", ");
                 lines.extend([
                     format!(
-                        "if (TriggerPhase::{} === $phase && in_array($event, [{events}], true)) {{",
+                        "if (SideEffectPhase::{} === $phase && in_array($event, [{events}], true)) {{",
                         cap(s(&t["phase"]))
                     ),
-                    format!("    $this->{}Trigger->handle($typed);", s(&t["name"])),
+                    format!("    $handlers[] = fn () => $this->{}SideEffect->handle({}::of($context));", s(&t["name"]), if t["phase"] == "postCommit" { &context } else { &pre_context }),
                     "}".into(),
                     "".into(),
                 ]);
             }
         }
+        lines.push("return $handlers;".to_owned());
         out.add(
-            method("dispatch", "void", lines.join("\n").trim_end())
-                .parameter(param("phase", "TriggerPhase", false))
-                .parameter(param("event", "TriggerEvent", false))
-                .parameter(param("context", "MutationContext", false)),
+            method("handlers", "iterable", lines.join("\n").trim_end())
+                .parameter(param("phase", "SideEffectPhase", false))
+                .parameter(param("event", "SideEffectEvent", false))
+                .parameter(param("context", "MutableMutationContext", false))
+                .document(doc("@return iterable<callable(): void>")),
         );
         files.push(out.file(&self.root));
         Ok(files)

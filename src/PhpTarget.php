@@ -86,6 +86,7 @@ final readonly class PhpTarget
             $files[] = $entities->generate($entity);
             $files[] = $mutators->generate($entity);
             $files[] = $contexts->mutationContext($entity);
+            $files[] = $contexts->mutationContext($entity, true);
             $files[] = $hydrators->generate($entity);
             $files[] = $deleters->generate($entity);
             $files[] = $inputs->generate($entity);

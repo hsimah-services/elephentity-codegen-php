@@ -73,6 +73,12 @@ $reference = [PHP_BINARY, $root . '/bin/eleph-gen-php-reference'];
 foreach (glob($root . '/tests/fixtures/golden/*/request.json') as $path) {
     $request = file_get_contents($path);
     $expected = json_decode(file_get_contents(dirname($path) . '/response.reference.json'), true, 512, JSON_THROW_ON_ERROR);
+    // Frozen snapshots belong to their original IR contract. Keep them intact;
+    // a newer contract is compared with the independently maintained PHP generator.
+    $version = json_decode($request, true, 512, JSON_THROW_ON_ERROR)['irVersion'];
+    if ($expected['irVersion'] !== $version) {
+        $expected = exchange($reference, $request);
+    }
     compare($expected, exchange($binary, $request), basename(dirname($path)));
 }
 

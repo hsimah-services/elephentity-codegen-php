@@ -61,7 +61,7 @@ final readonly class WiringGenerator
         foreach ($this->schema->entities as $entity) {
             $entries[] = $this->hydratorEntry($entity, $namespace);
             $entries[] = $this->inputEntry($entity, $namespace);
-            $entries[] = $this->triggersEntry($entity, $namespace);
+            $entries[] = $this->sideEffectsEntry($entity, $namespace);
             $entries[] = $this->verifiersEntry($entity, $namespace);
             $entries[] = $this->policiesEntry($entity, false, $namespace);
             $entries[] = $this->policiesEntry($entity, true, $namespace);
@@ -133,15 +133,15 @@ final readonly class WiringGenerator
         return $this->arm($this->names->input($entity), $args, $namespace);
     }
 
-    private function triggersEntry(EntityDefinition $entity, PhpNamespace $namespace): string
+    private function sideEffectsEntry(EntityDefinition $entity, PhpNamespace $namespace): string
     {
         $args = [];
 
-        foreach ($entity->triggers as $trigger) {
-            $args[] = $this->contractArg($this->names->triggerHandler($entity, $trigger->name), $namespace);
+        foreach ($entity->sideEffects as $sideEffect) {
+            $args[] = $this->contractArg($this->names->sideEffectHandler($entity, $sideEffect->name), $namespace);
         }
 
-        return $this->arm($this->names->triggers($entity), $args, $namespace);
+        return $this->arm($this->names->sideEffects($entity), $args, $namespace);
     }
 
     private function verifiersEntry(EntityDefinition $entity, PhpNamespace $namespace): string

@@ -155,7 +155,7 @@ impl Gen<'_> {
     }
 }
 fn response(files: Vec<Value>, errors: Vec<String>) -> Value {
-    json!({"elephentity":1,"irVersion":"1.1","headerStyle":"php","extensions":if errors.is_empty() {vec!["php"]} else {vec![]},"files":files,"errors":errors})
+    json!({"elephentity":1,"irVersion":"1.2","headerStyle":"php","extensions":if errors.is_empty() {vec!["php"]} else {vec![]},"files":files,"errors":errors})
 }
 fn run(v: &Value) -> Result<Value> {
     let kind = match v.get("request") {
@@ -173,11 +173,11 @@ fn run(v: &Value) -> Result<Value> {
     if v["elephentity"].as_u64() != Some(1) {
         return Err("Protocol version mismatch: this build speaks 1.".into());
     }
-    if v["irVersion"] != "1.1" {
-        return Err("IR version mismatch: this build emits 1.1.".into());
+    if v["irVersion"] != "1.2" {
+        return Err("IR version mismatch: this build emits 1.2.".into());
     }
     if kind == "describe" {
-        return Ok(json!({"elephentity":1,"irVersion":"1.1","provides":{}}));
+        return Ok(json!({"elephentity":1,"irVersion":"1.2","provides":{}}));
     }
     if s(&v["target"]).is_empty() {
         return Err("The request names no target.".into());
