@@ -177,7 +177,12 @@ fn run(v: &Value) -> Result<Value> {
         return Err("IR version mismatch: this build emits 1.2.".into());
     }
     if kind == "describe" {
-        return Ok(json!({"elephentity":1,"irVersion":"1.2","provides":{}}));
+        // `check` is how this builder's tree is checked. The orchestrator passes `provides` through
+        // untouched; `eleph check` fills in {project} and {output} and runs the command, finding
+        // `eleph-check-php` in the nearest vendor/bin like any Composer-installed program.
+        return Ok(json!({"elephentity":1,"irVersion":"1.2","provides":{
+            "check": {"command": ["eleph-check-php", "--project", "{project}", "--output", "{output}"]}
+        }}));
     }
     if s(&v["target"]).is_empty() {
         return Err("The request names no target.".into());

@@ -98,3 +98,16 @@ fn enum_collisions_return_errors_without_files() {
         }
     }
 }
+
+#[test]
+fn describe_advertises_the_checker() {
+    let output = invoke(&json!({"elephentity":1,"irVersion":"1.2","request":"describe"}));
+    assert!(output.status.success());
+    let actual: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        actual,
+        json!({"elephentity":1,"irVersion":"1.2","provides":{
+            "check": {"command": ["eleph-check-php", "--project", "{project}", "--output", "{output}"]}
+        }})
+    );
+}
