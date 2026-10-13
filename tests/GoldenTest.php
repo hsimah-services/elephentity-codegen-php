@@ -105,11 +105,11 @@ final class GoldenTest extends TestCase
         self::assertSame([], $response['files']);
     }
 
-    public function testItDescribesItselfAsProvidingNothing(): void
+    public function testItDescribesItselfAsProvidingOnlyAChecker(): void
     {
-        // Answering emptily is still answering, and is what separates "provides
-        // nothing" from "could not be asked" — which is the difference between a
-        // language generator working normally and a build that should refuse.
+        // A language generator provides no integration, driver or pattern, so the one
+        // thing it says is how its tree is checked. `eleph check` fills in the two
+        // placeholders and finds eleph-check-php in the nearest vendor/bin.
         $result = $this->invoke((string) json_encode([
             'elephentity' => 1,
             'irVersion' => '1.2',
@@ -120,7 +120,13 @@ final class GoldenTest extends TestCase
         self::assertSame(0, $result['exit'], $result['stderr']);
         self::assertSame('', $result['stderr']);
         self::assertSame(
-            ['elephentity' => 1, 'irVersion' => '1.2', 'provides' => []],
+            [
+                'elephentity' => 1,
+                'irVersion' => '1.2',
+                'provides' => ['check' => ['command' => [
+                    'eleph-check-php', '--project', '{project}', '--output', '{output}',
+                ]]],
+            ],
             json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR),
         );
     }

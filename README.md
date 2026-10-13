@@ -58,6 +58,23 @@ are an independent copy, and the runtime classes generated code refers to are st
 version gate is what holds the copy in step — a mismatch is a refusal, never a silent
 misread.
 
+## Gate 4: `eleph check`
+
+This builder answers `provides.check` in `describe`, so `eleph check` runs
+
+```
+eleph-check-php --project {project} --output {output}
+```
+
+for the `php` target, with `{project}` and `{output}` filled in. `eleph-check-php` is a Composer
+`bin`, so it lands in `vendor/bin` beside `eleph-gen-php`, and `eleph` finds it the same way it
+finds a builder: the nearest `vendor/bin` above the project, then beside the running `eleph`, then
+`PATH`. It loads `<output>/class-map.php`, autoloads the generated classes (and the project's own
+Composer autoloader, if there is one), runs every `<output>/*/verify.php` and prints one
+`{"severity": "error|warning|info", "message": "..."}` per line. It exits non-zero if any is an
+error, and an unreadable tree is an error signal rather than a crash or a pass. It needs PHP, which
+is fine here: the tree it checks is PHP.
+
 ## Working on it
 
 ```bash

@@ -28,7 +28,8 @@
         }
     },
     "bin": [
-        "bin/eleph-gen-php"
+        "bin/eleph-gen-php",
+        "bin/eleph-check-php"
     ],
     "scripts": {
         "test": "phpunit",
