@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d79476bc422933fd02c1f69e3be7f1f3",
+    "content-hash": "ea889f2e3310e85529557b5c19b507a4",
     "packages": [
         {
             "name": "elephentity/runtime",
-            "version": "v0.13.1",
+            "version": "v0.14.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hsimah-services/elephentity-runtime.git",
-                "reference": "a2c260d5e47efbab3933fd7a85b39dd07a6afeb1"
+                "reference": "399619b88c28590b4ac1bec6bef6e5ac4592c2b4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hsimah-services/elephentity-runtime/zipball/a2c260d5e47efbab3933fd7a85b39dd07a6afeb1",
-                "reference": "a2c260d5e47efbab3933fd7a85b39dd07a6afeb1",
+                "url": "https://api.github.com/repos/hsimah-services/elephentity-runtime/zipball/399619b88c28590b4ac1bec6bef6e5ac4592c2b4",
+                "reference": "399619b88c28590b4ac1bec6bef6e5ac4592c2b4",
                 "shasum": ""
             },
             "require": {
@@ -38,14 +38,14 @@
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
-                "Apache-2.0"
+                "MIT"
             ],
             "description": "Elephentity runtime contracts: storage port, unit of work, verification, loaders.",
             "support": {
                 "issues": "https://github.com/hsimah-services/elephentity-runtime/issues",
-                "source": "https://github.com/hsimah-services/elephentity-runtime/tree/v0.13.1"
+                "source": "https://github.com/hsimah-services/elephentity-runtime/tree/v0.14.1"
             },
-            "time": "2026-10-10T22:13:33+00:00"
+            "time": "2026-10-18T22:32:08+00:00"
         },
         {
             "name": "nette/php-generator",
@@ -602,20 +602,20 @@
         },
         {
             "name": "elephentity/graphql",
-            "version": "v0.2.0-alpha.1",
+            "version": "v0.2.0-alpha.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hsimah-services/elephentity-graphql-php.git",
-                "reference": "5d49427719c1a0e89e8a17d60f0a85ec3de4fbde"
+                "reference": "e5f8893cfa2450dd93bbcc89bbbe357f89eff47b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hsimah-services/elephentity-graphql-php/zipball/5d49427719c1a0e89e8a17d60f0a85ec3de4fbde",
-                "reference": "5d49427719c1a0e89e8a17d60f0a85ec3de4fbde",
+                "url": "https://api.github.com/repos/hsimah-services/elephentity-graphql-php/zipball/e5f8893cfa2450dd93bbcc89bbbe357f89eff47b",
+                "reference": "e5f8893cfa2450dd93bbcc89bbbe357f89eff47b",
                 "shasum": ""
             },
             "require": {
-                "elephentity/runtime": "^0.13",
+                "elephentity/runtime": "^0.13 || ^0.14",
                 "php": ">=8.3",
                 "webonyx/graphql-php": "^15.0"
             },
@@ -627,31 +627,31 @@
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
-                "Apache-2.0"
+                "MIT"
             ],
             "description": "Experimental Framework-independent GraphQL integration for the Elephentity PHP runtime.",
             "support": {
                 "issues": "https://github.com/hsimah-services/elephentity-graphql-php/issues",
-                "source": "https://github.com/hsimah-services/elephentity-graphql-php/tree/v0.2.0-alpha.1"
+                "source": "https://github.com/hsimah-services/elephentity-graphql-php/tree/v0.2.0-alpha.3"
             },
-            "time": "2026-10-10T20:29:23+00:00"
+            "time": "2026-10-19T19:13:29+00:00"
         },
         {
             "name": "elephentity/memory",
-            "version": "v0.13.1",
+            "version": "v0.14.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hsimah-services/elephentity-memory.git",
-                "reference": "48b5eb4093411287e068e58f8b27d79b265ccbc0"
+                "reference": "fbe974f49908e8fa88c7dfd6109a64e1d2d4f720"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hsimah-services/elephentity-memory/zipball/48b5eb4093411287e068e58f8b27d79b265ccbc0",
-                "reference": "48b5eb4093411287e068e58f8b27d79b265ccbc0",
+                "url": "https://api.github.com/repos/hsimah-services/elephentity-memory/zipball/fbe974f49908e8fa88c7dfd6109a64e1d2d4f720",
+                "reference": "fbe974f49908e8fa88c7dfd6109a64e1d2d4f720",
                 "shasum": ""
             },
             "require": {
-                "elephentity/runtime": "^0.10 || ^0.11 || ^0.12 || ^0.13",
+                "elephentity/runtime": "^0.10 || ^0.11 || ^0.12 || ^0.13 || ^0.14",
                 "php": ">=8.3"
             },
             "require-dev": {
@@ -665,31 +665,31 @@
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
-                "Apache-2.0"
+                "MIT"
             ],
             "description": "An in-process StorageAdaptor with no backend of its own. The neutral driver for a project that wants raw PHP objects rather than WordPress.",
             "support": {
                 "issues": "https://github.com/hsimah-services/elephentity-memory/issues",
-                "source": "https://github.com/hsimah-services/elephentity-memory/tree/v0.13.1"
+                "source": "https://github.com/hsimah-services/elephentity-memory/tree/v0.14.1"
             },
-            "time": "2026-10-10T20:35:35+00:00"
+            "time": "2026-10-19T19:13:28+00:00"
         },
         {
             "name": "elephentity/sqlite",
-            "version": "v0.1.0-alpha.5",
+            "version": "v0.1.0-alpha.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hsimah-services/elephentity-sqlite.git",
-                "reference": "818b6dd2868a17b7d0526c1d9b8a778a29903575"
+                "reference": "c7ae66a3bec4fda12cb55bab301f38faff2b7833"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hsimah-services/elephentity-sqlite/zipball/818b6dd2868a17b7d0526c1d9b8a778a29903575",
-                "reference": "818b6dd2868a17b7d0526c1d9b8a778a29903575",
+                "url": "https://api.github.com/repos/hsimah-services/elephentity-sqlite/zipball/c7ae66a3bec4fda12cb55bab301f38faff2b7833",
+                "reference": "c7ae66a3bec4fda12cb55bab301f38faff2b7833",
                 "shasum": ""
             },
             "require": {
-                "elephentity/runtime": "^0.13.1",
+                "elephentity/runtime": "^0.13.1 || ^0.14",
                 "ext-mbstring": "*",
                 "ext-pdo": "*",
                 "ext-pdo_sqlite": "*",
@@ -703,14 +703,14 @@
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
-                "Apache-2.0"
+                "MIT"
             ],
             "description": "Experimental SQLite storage adaptor for the Elephentity PHP runtime.",
             "support": {
                 "issues": "https://github.com/hsimah-services/elephentity-sqlite/issues",
-                "source": "https://github.com/hsimah-services/elephentity-sqlite/tree/v0.1.0-alpha.5"
+                "source": "https://github.com/hsimah-services/elephentity-sqlite/tree/v0.1.0-alpha.7"
             },
-            "time": "2026-10-10T22:23:42+00:00"
+            "time": "2026-10-19T19:13:23+00:00"
         },
         {
             "name": "ergebnis/agent-detector",
@@ -4784,16 +4784,16 @@
         },
         {
             "name": "webonyx/graphql-php",
-            "version": "v15.38.0",
+            "version": "v15.38.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webonyx/graphql-php.git",
-                "reference": "47e6ba3f27d6e0e9da4c6ae4b6c8875921409e10"
+                "reference": "32edc67af119b709d020f93447729afd503fe56a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webonyx/graphql-php/zipball/47e6ba3f27d6e0e9da4c6ae4b6c8875921409e10",
-                "reference": "47e6ba3f27d6e0e9da4c6ae4b6c8875921409e10",
+                "url": "https://api.github.com/repos/webonyx/graphql-php/zipball/32edc67af119b709d020f93447729afd503fe56a",
+                "reference": "32edc67af119b709d020f93447729afd503fe56a",
                 "shasum": ""
             },
             "require": {
@@ -4848,7 +4848,7 @@
             ],
             "support": {
                 "issues": "https://github.com/webonyx/graphql-php/issues",
-                "source": "https://github.com/webonyx/graphql-php/tree/v15.38.0"
+                "source": "https://github.com/webonyx/graphql-php/tree/v15.38.1"
             },
             "funding": [
                 {
@@ -4860,7 +4860,7 @@
                     "type": "open_collective"
                 }
             ],
-            "time": "2026-10-06T18:57:32+00:00"
+            "time": "2026-10-12T14:31:33+00:00"
         }
     ],
     "aliases": [],
